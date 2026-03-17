@@ -26,7 +26,26 @@ export default function Dashboard({ onNavigate }) {
     return () => supabase.removeChannel(channel);
   }, []);
 
-  // --- Hold to Unlock Logic ---
+  // --- Hold Logic (Unified for Mouse & Touch) ---
+  const handleStart = (e, type) => {
+    // Prevent zooming/context menus on mobile
+    if (e.type === 'touchstart') e.preventDefault();
+    
+    if (type === 'unlock') {
+      startHold();
+    } else if (type === 'mic') {
+      setIsRecording(true);
+    }
+  };
+
+  const handleEnd = (type) => {
+    if (type === 'unlock') {
+      resetHold();
+    } else if (type === 'mic') {
+      setIsRecording(false);
+    }
+  };
+
   const startHold = () => {
     setIsHolding(true);
     const duration = 1500; 
@@ -75,19 +94,16 @@ export default function Dashboard({ onNavigate }) {
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
       </style>
 
-      {/* Top Navigation */}
       <nav className="dash-nav">
         <div className="logo">Door<span>IQ</span></div>
         <button className="settings-btn" onClick={onNavigate}>⚙️</button>
       </nav>
 
       <div className="main-content">
-        {/* Left Column: Camera & Voice */}
         <div className="stream-section">
           <div className="video-card">
             <div className="live-badge"><span>•</span> LIVE</div>
             <div className="ir-badge">🌙 IR ACTIVE</div>
-            {/* Placeholder for your Raspberry Pi Stream */}
             <div className="video-feed">
                <p>Raspberry Pi Camera Stream</p>
             </div>
@@ -96,25 +112,30 @@ export default function Dashboard({ onNavigate }) {
           <div className="mic-card">
             <div className={`record-ring ${isRecording ? 'active' : ''}`}>
                <button 
-                onMouseDown={() => setIsRecording(true)} 
-                onMouseUp={() => setIsRecording(false)}
+                onMouseDown={(e) => handleStart(e, 'mic')} 
+                onMouseUp={() => handleEnd('mic')}
+                onTouchStart={(e) => handleStart(e, 'mic')}
+                onTouchEnd={() => handleEnd('mic')}
                 className="mic-btn"
               >
                 🎤
               </button>
             </div>
-            <p>{isRecording ? "TRANSMITTING AUDIO..." : "HOLD TO TALK"}</p>
+            <p>{isRecording ? "TRANSMITTING..." : "HOLD TO TALK"}</p>
           </div>
         </div>
 
-        {/* Right Column: Controls & Activity */}
         <div className="control-section">
           <div className="unlock-container">
              <button 
                 className={`hold-btn ${unlockProgress === 100 ? 'granted' : ''}`}
-                onMouseDown={startHold}
-                onMouseUp={resetHold}
-                onMouseLeave={resetHold}
+                onMouseDown={(e) => handleStart(e, 'unlock')}
+                onMouseUp={() => handleEnd('unlock')}
+                onMouseLeave={() => handleEnd('unlock')}
+                onTouchStart={(e) => handleStart(e, 'unlock')}
+                onTouchEnd={() => handleEnd('unlock')}
+                // Prevents right-click menu on long press
+                onContextMenu={(e) => e.preventDefault()}
              >
                 <div className="progress-bar" style={{ width: `${unlockProgress}%` }}></div>
                 <span className="btn-label">
@@ -145,23 +166,25 @@ export default function Dashboard({ onNavigate }) {
       </div>
 
       <style jsx>{`
+        /* ... keeping your existing styles ... */
         .dashboard-wrapper {
           min-height: 100vh;
           background: #050505;
           color: white;
           font-family: 'Plus Jakarta Sans', sans-serif;
           padding: 20px 5%;
+          /* Prevent text selection while holding */
+          user-select: none; 
+          -webkit-user-select: none;
         }
 
         .dash-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         .logo { font-size: 1.5rem; font-weight: 800; }
         .logo span { color: #00d4ff; }
         .settings-btn { background: #111; border: 1px solid #222; padding: 10px; border-radius: 12px; cursor: pointer; font-size: 1.2rem; transition: 0.3s; }
-        .settings-btn:hover { background: #222; }
-
+        
         .main-content { display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px; }
 
-        /* Video Feed */
         .video-card { 
           background: #000; border-radius: 24px; position: relative; overflow: hidden; 
           border: 1px solid rgba(255,255,255,0.1); aspect-ratio: 16/9; 
@@ -170,25 +193,22 @@ export default function Dashboard({ onNavigate }) {
         .live-badge { position: absolute; top: 15px; left: 15px; background: rgba(255,0,0,0.8); padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; }
         .ir-badge { position: absolute; top: 15px; right: 15px; background: rgba(0,212,255,0.2); color: #00d4ff; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; border: 1px solid #00d4ff; }
 
-        /* Mic Section */
         .mic-card { background: #0f0f0f; margin-top: 20px; border-radius: 24px; padding: 30px; text-align: center; border: 1px solid #1f1f1f; }
         .record-ring { width: 60px; height: 60px; margin: 0 auto 10px; border-radius: 50%; background: #222; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
         .record-ring.active { background: #00d4ff; box-shadow: 0 0 20px #00d4ff; transform: scale(1.1); }
-        .mic-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+        .mic-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
 
-        /* Controls */
         .hold-btn { 
           width: 100%; height: 70px; background: #111; border: 1px solid #222; border-radius: 16px; 
           position: relative; overflow: hidden; cursor: pointer; color: white; font-weight: 800; font-size: 1rem;
+          outline: none; -webkit-tap-highlight-color: transparent;
         }
-        .progress-bar { position: absolute; left: 0; top: 0; height: 100%; background: #00d4ff; transition: 0.05s linear; opacity: 0.6; }
-        .btn-label { position: relative; z-index: 2; }
+        .progress-bar { position: absolute; left: 0; top: 0; height: 100%; background: #00d4ff; transition: 0.05s linear; opacity: 0.6; pointer-events: none; }
+        .btn-label { position: relative; z-index: 2; pointer-events: none; }
         .hold-btn.granted { background: #00d4ff; color: black; }
 
-        .btn-alarm { width: 100%; margin-top: 15px; padding: 15px; border-radius: 16px; border: 1px solid #420000; background: #210000; color: #ff4d4d; font-weight: 700; cursor: pointer; transition: 0.3s; }
-        .btn-alarm:hover { background: #420000; }
+        .btn-alarm { width: 100%; margin-top: 15px; padding: 15px; border-radius: 16px; border: 1px solid #420000; background: #210000; color: #ff4d4d; font-weight: 700; cursor: pointer; }
 
-        /* Activity */
         .activity-card { background: #0f0f0f; border-radius: 24px; padding: 25px; margin-top: 30px; border: 1px solid #1f1f1f; }
         .activity-card h3 { font-size: 0.9rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; }
         .log-item { display: flex; align-items: center; gap: 15px; padding: 12px 0; border-bottom: 1px solid #1f1f1f; }

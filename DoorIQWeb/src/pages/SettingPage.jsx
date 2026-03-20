@@ -66,8 +66,7 @@ export default function SettingPage({ onNavigate }) {
         id, 
         user_id, 
         role, 
-        status,
-        profiles ( email )
+        status
       `) 
       .eq('home_id', homeId);
     
@@ -222,7 +221,7 @@ export default function SettingPage({ onNavigate }) {
                         <div className="setting-info">
                           {/* We check if profiles.email exists from our join query */}
                           <span className="label email-display">
-                            {m.profiles?.email || `User ID: ${m.user_id.slice(0, 8)}...`}
+                            {`User ID: ${m.user_id.slice(0, 8)}...`}
                           </span>
                           <span className={`status-tag ${m.status}`}>{m.status}</span>
                         </div>

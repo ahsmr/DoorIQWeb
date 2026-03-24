@@ -18,7 +18,7 @@ export default function RegisterPage({ onNavigateToLogin, onBackToLanding }) {
     if (error) {
       alert("Registration Error: " + error.message);
     } else {
-      alert("Account initialized! Check your email for confirmation or proceed to login.");
+      alert("Account initialized!");
       onNavigateToLogin();
     }
     setLoading(false);

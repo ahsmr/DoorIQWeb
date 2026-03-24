@@ -286,8 +286,24 @@ export default function Dashboard({ onNavigate }) {
           <div className="video-vault">
             <div className="vault-header">
                <h3 style={{margin:0}}>📁 Captured Clips</h3>
-               <button onClick={fetchAllVideos} style={{background:'none', border:'none', color:'#00d4ff', cursor:'pointer', fontSize:'0.8rem'}}>Refresh</button>
-            </div>
+<button 
+  onClick={fetchAllVideos} 
+  style={{
+    background: 'none', 
+    border: 'none', 
+    color: '#00d4ff', 
+    cursor: 'pointer', 
+    fontSize: '1.2rem', 
+    transition: 'transform 0.3s ease',
+    display: 'flex',
+    alignItems: 'center'
+  }}
+  onMouseEnter={(e) => e.currentTarget.style.transform = 'rotate(180deg)'}
+  onMouseLeave={(e) => e.currentTarget.style.transform = 'rotate(0deg)'}
+  title="Sync Storage"
+>
+  ↻
+</button>            </div>
             <div className="video-grid">
                {fetchingVideos ? <p style={{color:'#444'}}>Scanning Vault...</p> : 
                 videos.length === 0 ? <p style={{color:'#444', fontSize:'0.8rem'}}>No clips found for this home.</p> :

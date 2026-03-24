@@ -10,6 +10,10 @@ export default function Dashboard({ onNavigate }) {
   const [homeId, setHomeId] = useState(null); 
   const [invites, setInvites] = useState([]);
 
+  // --- NEW VIDEO VAULT STATE ---
+  const [videos, setVideos] = useState([]);
+  const [fetchingVideos, setFetchingVideos] = useState(false);
+
   const holdTimerRef = useRef(null);
   const isProcessingAction = useRef(false);
 
@@ -22,28 +26,27 @@ export default function Dashboard({ onNavigate }) {
   useEffect(() => {
     if (!homeId) return;
 
-    // Listen for new events (Unlocks/Alarms)
+    // Fetch videos for this specific home folder
+    fetchAllVideos();
+
     const eventChannel = supabase
-      .channel(`events-${homeId}`) // Unique channel name per home
+      .channel(`events-${homeId}`)
       .on('postgres_changes', 
         { 
           event: 'INSERT', 
           schema: 'public', 
           table: 'events',
-          filter: `home_id=eq.${homeId}` // Only listen for THIS home
+          filter: `home_id=eq.${homeId}` 
         }, 
         (payload) => {
           setEvents((prev) => {
-            // Check for duplicate ID to prevent UI glitches
             if (prev.some(e => e.id === payload.new.id)) return prev;
-            // Add new event to top and keep only the latest 4
             return [payload.new, ...prev].slice(0, 4);
           });
         }
       )
       .subscribe();
 
-    // Listen for invite changes (Status updates or new invites)
     const inviteChannel = supabase
       .channel(`invites-${homeId}`)
       .on('postgres_changes', 
@@ -57,6 +60,49 @@ export default function Dashboard({ onNavigate }) {
       supabase.removeChannel(inviteChannel);
     };
   }, [homeId]);
+
+  // --- NEW FETCH VIDEOS LOGIC ---
+  async function fetchAllVideos() {
+    if (!homeId) return;
+    setFetchingVideos(true);
+    try {
+      // 1. List files inside the folder named after the homeId
+      const { data: files, error: listError } = await supabase.storage
+        .from('camera-video')
+        .list(homeId, {
+          limit: 20,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+
+      if (listError) throw listError;
+
+      if (files && files.length > 0) {
+        // Filter out any non-video files or placeholders
+        const videoFiles = files.filter(f => f.name.endsWith('.mp4') || f.name.endsWith('.mov'));
+        const videoPaths = videoFiles.map(f => `${homeId}/${f.name}`);
+
+        // 2. Create Signed URLs for private access
+        const { data: signedUrls, error: signedError } = await supabase.storage
+          .from('camera-video')
+          .createSignedUrls(videoPaths, 3600); // 1 hour link
+
+        if (signedError) throw signedError;
+
+        const videosWithLinks = videoFiles.map((file, index) => ({
+          ...file,
+          url: signedUrls[index].signedUrl
+        }));
+
+        setVideos(videosWithLinks);
+      } else {
+        setVideos([]);
+      }
+    } catch (err) {
+      console.error("Video fetch error:", err);
+    } finally {
+      setFetchingVideos(false);
+    }
+  }
 
   async function initializeDashboard() {
     setLoading(true);
@@ -118,14 +164,11 @@ export default function Dashboard({ onNavigate }) {
   async function triggerAction(actionName) {
     if (!homeId || isProcessingAction.current) return;
     isProcessingAction.current = true;
-    
     try {
-      // Insert to DB: This triggers the Realtime broadcast we set up earlier
       await supabase.from('events').insert([{ type: actionName, home_id: homeId }]);
     } catch (e) {
       console.error(e);
     } finally {
-      // Cooldown to prevent spam
       setTimeout(() => { isProcessingAction.current = false; }, 1500);
     }
   }
@@ -133,11 +176,9 @@ export default function Dashboard({ onNavigate }) {
   const startHold = () => {
     if (isProcessingAction.current) return;
     setIsHolding(true);
-    
     const duration = 1200; 
-    const interval = 10; // 100fps for smooth bar movement
+    const interval = 10;
     const step = (100 / (duration / interval));
-
     holdTimerRef.current = setInterval(() => {
       setUnlockProgress((prev) => {
         if (prev >= 100) {
@@ -177,6 +218,18 @@ export default function Dashboard({ onNavigate }) {
         .video-card { background: #000; border-radius: 24px; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); aspect-ratio: 16/9; }
         .video-feed { height: 100%; display: flex; align-items: center; justify-content: center; color: #444; }
         
+        /* VIDEO VAULT STYLES */
+        .video-vault { background: #0f0f0f; border-radius: 24px; padding: 25px; margin-top: 25px; border: 1px solid #1f1f1f; }
+        .vault-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; max-height: 350px; overflow-y: auto; padding-right: 5px; }
+        .video-item { background: #141414; border-radius: 16px; overflow: hidden; border: 1px solid #222; cursor: pointer; transition: 0.2s; position: relative; }
+        .video-item:hover { border-color: #00d4ff; transform: translateY(-3px); }
+        .video-item video { width: 100%; aspect-ratio: 1; object-fit: cover; opacity: 0.6; }
+        .video-item:hover video { opacity: 1; }
+        .vid-info { padding: 10px; }
+        .vid-info p { margin: 0; font-size: 0.7rem; font-weight: 600; }
+        .vid-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; color: #00d4ff; }
+
         .mic-card { background: #0f0f0f; margin-top: 20px; border-radius: 24px; padding: 30px; text-align: center; border: 1px solid #1f1f1f; }
         .record-ring { width: 60px; height: 60px; margin: 0 auto 10px; border-radius: 50%; background: #222; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
         .record-ring.active { background: #00d4ff; box-shadow: 0 0 20px #00d4ff; transform: scale(1.1); }
@@ -228,6 +281,30 @@ export default function Dashboard({ onNavigate }) {
                 {homeId ? <p>Raspberry Pi Camera Stream</p> : <p>Connect to a home to view stream</p>}
             </div>
           </div>
+
+          {/* NEW CAPTURED CLIPS VAULT */}
+          <div className="video-vault">
+            <div className="vault-header">
+               <h3 style={{margin:0}}>📁 Captured Clips</h3>
+               <button onClick={fetchAllVideos} style={{background:'none', border:'none', color:'#00d4ff', cursor:'pointer', fontSize:'0.8rem'}}>Refresh</button>
+            </div>
+            <div className="video-grid">
+               {fetchingVideos ? <p style={{color:'#444'}}>Scanning Vault...</p> : 
+                videos.length === 0 ? <p style={{color:'#444', fontSize:'0.8rem'}}>No clips found for this home.</p> :
+                videos.map((vid, i) => (
+                  <div key={i} className="video-item" onClick={() => window.open(vid.url, '_blank')}>
+                    <span className="vid-badge">REC</span>
+                    <video src={vid.url} preload="metadata" />
+                    <div className="vid-info">
+                       <p>{new Date(vid.created_at).toLocaleDateString()}</p>
+                       <p style={{color:'#64748b'}}>{new Date(vid.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                    </div>
+                  </div>
+                ))
+               }
+            </div>
+          </div>
+
           <div className="mic-card">
             <div className={`record-ring ${isRecording ? 'active' : ''}`}>
                <button 

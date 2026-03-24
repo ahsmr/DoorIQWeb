@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient.js';
+// --- NEW: Import LiveKit Client ---
+import { Room, RoomEvent } from 'livekit-client';
 
 export default function Dashboard({ onNavigate }) {
   const [events, setEvents] = useState([]);
@@ -10,7 +12,12 @@ export default function Dashboard({ onNavigate }) {
   const [homeId, setHomeId] = useState(null); 
   const [invites, setInvites] = useState([]);
 
-  // --- NEW VIDEO VAULT STATE ---
+  // --- NEW: LiveKit State & Refs ---
+  const [isLiveKitConnected, setIsLiveKitConnected] = useState(false);
+  const videoRef = useRef(null);
+  const audioRef = useRef(null);
+  const roomRef = useRef(null); // Keeps track of the room to disconnect safely
+
   const [videos, setVideos] = useState([]);
   const [fetchingVideos, setFetchingVideos] = useState(false);
 
@@ -22,12 +29,15 @@ export default function Dashboard({ onNavigate }) {
     fetchInvites();
   }, []);
 
-  // REFINED REAL-TIME LOGIC
+  // REFINED REAL-TIME LOGIC & LIVEKIT INITIALIZATION
   useEffect(() => {
     if (!homeId) return;
 
     // Fetch videos for this specific home folder
     fetchAllVideos();
+    
+    // Connect to secure video stream
+    connectToLiveKit();
 
     const eventChannel = supabase
       .channel(`events-${homeId}`)
@@ -58,15 +68,85 @@ export default function Dashboard({ onNavigate }) {
     return () => {
       supabase.removeChannel(eventChannel);
       supabase.removeChannel(inviteChannel);
+      // Clean up LiveKit room on unmount
+      if (roomRef.current) {
+        roomRef.current.disconnect();
+      }
     };
   }, [homeId]);
 
-  // --- NEW FETCH VIDEOS LOGIC ---
+// --- FIXED: SECURE LIVEKIT CONNECTION LOGIC ---
+  async function connectToLiveKit() {
+    try {
+      // 1. Get the current session directly
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.error("No active session. Retrying in 1s...");
+        setTimeout(connectToLiveKit, 1000); // Retry once if session is still loading
+        return;
+      }
+
+      console.log("Session found, invoking Edge Function...");
+
+      // 2. Invoke the function. 
+      // IMPORTANT: Explicitly passing the token ensures the 401 goes away.
+      const { data, error } = await supabase.functions.invoke('swift-action', {
+        body: { 
+          roomName: homeId, 
+          participantName: session.user.email 
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+
+      if (error) {
+        // If it's still 401, it means the Edge Function "Verify JWT" 
+        // toggle is on but the token is rejected.
+        console.error("Supabase Function Error:", error.message);
+        return;
+      }
+
+      if (!data?.token) {
+        console.error("No token received from function");
+        return;
+      }
+
+      // 3. Create a new LiveKit Room
+      const room = new Room();
+      roomRef.current = room;
+
+      // 4. Listen for tracks
+      room.on(RoomEvent.TrackSubscribed, (track) => {
+        if (track.kind === 'video' && videoRef.current) {
+          track.attach(videoRef.current);
+        }
+        if (track.kind === 'audio' && audioRef.current) {
+          track.attach(audioRef.current);
+        }
+      });
+
+      room.on(RoomEvent.Disconnected, () => {
+        setIsLiveKitConnected(false);
+      });
+
+      // 5. Connect
+      await room.connect('wss://dooriq-1o56jjsi.livekit.cloud', data.token);
+      
+      console.log("Successfully connected to LiveKit!");
+      setIsLiveKitConnected(true);
+
+    } catch (err) {
+      console.error("LiveKit connection failed:", err);
+    }
+  }
+
+  // --- FETCH VIDEOS LOGIC ---
   async function fetchAllVideos() {
     if (!homeId) return;
     setFetchingVideos(true);
     try {
-      // 1. List files inside the folder named after the homeId
       const { data: files, error: listError } = await supabase.storage
         .from('camera-video')
         .list(homeId, {
@@ -77,14 +157,12 @@ export default function Dashboard({ onNavigate }) {
       if (listError) throw listError;
 
       if (files && files.length > 0) {
-        // Filter out any non-video files or placeholders
         const videoFiles = files.filter(f => f.name.endsWith('.mp4') || f.name.endsWith('.mov'));
         const videoPaths = videoFiles.map(f => `${homeId}/${f.name}`);
 
-        // 2. Create Signed URLs for private access
         const { data: signedUrls, error: signedError } = await supabase.storage
           .from('camera-video')
-          .createSignedUrls(videoPaths, 3600); // 1 hour link
+          .createSignedUrls(videoPaths, 3600);
 
         if (signedError) throw signedError;
 
@@ -216,9 +294,11 @@ export default function Dashboard({ onNavigate }) {
         
         .main-content { display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px; }
         .video-card { background: #000; border-radius: 24px; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); aspect-ratio: 16/9; }
-        .video-feed { height: 100%; display: flex; align-items: center; justify-content: center; color: #444; }
+        .video-feed { height: 100%; display: flex; align-items: center; justify-content: center; color: #444; position: relative; }
         
-        /* VIDEO VAULT STYLES */
+        /* NEW: Styles for the injected video */
+        .livekit-video { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+
         .video-vault { background: #0f0f0f; border-radius: 24px; padding: 25px; margin-top: 25px; border: 1px solid #1f1f1f; }
         .vault-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; max-height: 350px; overflow-y: auto; padding-right: 5px; }
@@ -278,32 +358,29 @@ export default function Dashboard({ onNavigate }) {
         <div className="stream-section" style={{opacity: homeId ? 1 : 0.3, pointerEvents: homeId ? 'all' : 'none'}}>
           <div className="video-card">
             <div className="video-feed">
-                {homeId ? <p>Raspberry Pi Camera Stream</p> : <p>Connect to a home to view stream</p>}
+                {/* NEW: LiveKit Video & Audio Elements */}
+                <video ref={videoRef} className="livekit-video" autoPlay playsInline muted />
+                <audio ref={audioRef} autoPlay playsInline />
+                
+                {/* Status Messages */}
+                {!homeId && <p>Connect to a home to view stream</p>}
+                {homeId && !isLiveKitConnected && <p>Connecting to secure stream...</p>}
             </div>
           </div>
 
-          {/* NEW CAPTURED CLIPS VAULT */}
           <div className="video-vault">
             <div className="vault-header">
                <h3 style={{margin:0}}>📁 Captured Clips</h3>
-<button 
-  onClick={fetchAllVideos} 
-  style={{
-    background: 'none', 
-    border: 'none', 
-    color: '#00d4ff', 
-    cursor: 'pointer', 
-    fontSize: '1.2rem', 
-    transition: 'transform 0.3s ease',
-    display: 'flex',
-    alignItems: 'center'
-  }}
-  onMouseEnter={(e) => e.currentTarget.style.transform = 'rotate(180deg)'}
-  onMouseLeave={(e) => e.currentTarget.style.transform = 'rotate(0deg)'}
-  title="Sync Storage"
->
-  ↻
-</button>            </div>
+               <button 
+                 onClick={fetchAllVideos} 
+                 style={{ background: 'none', border: 'none', color: '#00d4ff', cursor: 'pointer', fontSize: '1.2rem', transition: 'transform 0.3s ease', display: 'flex', alignItems: 'center' }}
+                 onMouseEnter={(e) => e.currentTarget.style.transform = 'rotate(180deg)'}
+                 onMouseLeave={(e) => e.currentTarget.style.transform = 'rotate(0deg)'}
+                 title="Sync Storage"
+               >
+                 ↻
+               </button>            
+            </div>
             <div className="video-grid">
                {fetchingVideos ? <p style={{color:'#444'}}>Scanning Vault...</p> : 
                 videos.length === 0 ? <p style={{color:'#444', fontSize:'0.8rem'}}>No clips found for this home.</p> :

@@ -12,11 +12,12 @@ export default function Dashboard({ onNavigate }) {
   const [homeId, setHomeId] = useState(null); 
   const [invites, setInvites] = useState([]);
 
-  // --- NEW: LiveKit State & Refs ---
+  // --- LiveKit State & Refs ---
   const [isLiveKitConnected, setIsLiveKitConnected] = useState(false);
+  const [isLiveRequested, setIsLiveRequested] = useState(false); // NEW: Track button click
   const videoRef = useRef(null);
   const audioRef = useRef(null);
-  const roomRef = useRef(null); // Keeps track of the room to disconnect safely
+  const roomRef = useRef(null); 
 
   const [videos, setVideos] = useState([]);
   const [fetchingVideos, setFetchingVideos] = useState(false);
@@ -29,15 +30,13 @@ export default function Dashboard({ onNavigate }) {
     fetchInvites();
   }, []);
 
-  // REFINED REAL-TIME LOGIC & LIVEKIT INITIALIZATION
+  // REFINED REAL-TIME LOGIC
   useEffect(() => {
     if (!homeId) return;
 
-    // Fetch videos for this specific home folder
     fetchAllVideos();
     
-    // Connect to secure video stream
-    connectToLiveKit();
+    // REMOVED: connectToLiveKit() call from here so it doesn't auto-start
 
     const eventChannel = supabase
       .channel(`events-${homeId}`)
@@ -68,29 +67,40 @@ export default function Dashboard({ onNavigate }) {
     return () => {
       supabase.removeChannel(eventChannel);
       supabase.removeChannel(inviteChannel);
-      // Clean up LiveKit room on unmount
       if (roomRef.current) {
         roomRef.current.disconnect();
       }
     };
   }, [homeId]);
 
-// --- FIXED: SECURE LIVEKIT CONNECTION LOGIC ---
+  // Handle the manual "Go Live" click
+  const handleGoLive = () => {
+    setIsLiveRequested(true);
+    connectToLiveKit();
+  };
+
+  // NEW: Handle manual "Go Offline" click
+  const handleGoOffline = () => {
+    if (roomRef.current) {
+      roomRef.current.disconnect();
+    }
+    setIsLiveRequested(false);
+    setIsLiveKitConnected(false);
+  };
+
+// --- YOUR SECURE LIVEKIT CONNECTION LOGIC (UNTOUCHED) ---
   async function connectToLiveKit() {
     try {
-      // 1. Get the current session directly
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
         console.error("No active session. Retrying in 1s...");
-        setTimeout(connectToLiveKit, 1000); // Retry once if session is still loading
+        setTimeout(connectToLiveKit, 1000); 
         return;
       }
 
       console.log("Session found, invoking Edge Function...");
 
-      // 2. Invoke the function. 
-      // IMPORTANT: Explicitly passing the token ensures the 401 goes away.
       const { data, error } = await supabase.functions.invoke('swift-action', {
         body: { 
           roomName: homeId, 
@@ -102,8 +112,6 @@ export default function Dashboard({ onNavigate }) {
       });
 
       if (error) {
-        // If it's still 401, it means the Edge Function "Verify JWT" 
-        // toggle is on but the token is rejected.
         console.error("Supabase Function Error:", error.message);
         return;
       }
@@ -113,11 +121,9 @@ export default function Dashboard({ onNavigate }) {
         return;
       }
 
-      // 3. Create a new LiveKit Room
       const room = new Room();
       roomRef.current = room;
 
-      // 4. Listen for tracks
       room.on(RoomEvent.TrackSubscribed, (track) => {
         if (track.kind === 'video' && videoRef.current) {
           track.attach(videoRef.current);
@@ -131,7 +137,6 @@ export default function Dashboard({ onNavigate }) {
         setIsLiveKitConnected(false);
       });
 
-      // 5. Connect
       await room.connect('wss://dooriq-1o56jjsi.livekit.cloud', data.token);
       
       console.log("Successfully connected to LiveKit!");
@@ -142,7 +147,7 @@ export default function Dashboard({ onNavigate }) {
     }
   }
 
-  // --- FETCH VIDEOS LOGIC ---
+  // --- REMAINING LOGIC (FETCH VIDEOS, DASHBOARD INIT, ETC) ---
   async function fetchAllVideos() {
     if (!homeId) return;
     setFetchingVideos(true);
@@ -296,7 +301,13 @@ export default function Dashboard({ onNavigate }) {
         .video-card { background: #000; border-radius: 24px; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); aspect-ratio: 16/9; }
         .video-feed { height: 100%; display: flex; align-items: center; justify-content: center; color: #444; position: relative; }
         
-        /* NEW: Styles for the injected video */
+        /* Button Styles */
+        .btn-go-live { background: #00d4ff; color: #000; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 800; cursor: pointer; z-index: 10; }
+        .btn-go-live:hover { background: #00b8e6; }
+
+        .btn-go-offline { position: absolute; top: 20px; right: 20px; background: rgba(255, 0, 0, 0.2); color: #ff4d4d; border: 1px solid #ff4d4d; padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer; z-index: 20; transition: 0.2s; }
+        .btn-go-offline:hover { background: #ff4d4d; color: #fff; }
+
         .livekit-video { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
 
         .video-vault { background: #0f0f0f; border-radius: 24px; padding: 25px; margin-top: 25px; border: 1px solid #1f1f1f; }
@@ -358,13 +369,19 @@ export default function Dashboard({ onNavigate }) {
         <div className="stream-section" style={{opacity: homeId ? 1 : 0.3, pointerEvents: homeId ? 'all' : 'none'}}>
           <div className="video-card">
             <div className="video-feed">
-                {/* NEW: LiveKit Video & Audio Elements */}
-                <video ref={videoRef} className="livekit-video" autoPlay playsInline muted />
-                <audio ref={audioRef} autoPlay playsInline />
-                
-                {/* Status Messages */}
+                {!isLiveRequested ? (
+                  <button className="btn-go-live" onClick={handleGoLive}>Go Live</button>
+                ) : (
+                  <>
+                    <button className="btn-go-offline" onClick={handleGoOffline}>Go Offline</button>
+                    <video ref={videoRef} className="livekit-video" autoPlay playsInline muted />
+                    <audio ref={audioRef} autoPlay playsInline />
+                    
+                    {!isLiveKitConnected && <p>Connecting to secure stream...</p>}
+                  </>
+                )}
+
                 {!homeId && <p>Connect to a home to view stream</p>}
-                {homeId && !isLiveKitConnected && <p>Connecting to secure stream...</p>}
             </div>
           </div>
 

@@ -1,81 +1,108 @@
 import React, { useState } from 'react';
+// Import the pre-configured Supabase client to interact with your database/auth
 import { supabase } from '../supabaseClient';
 
+/**
+ * LoginPage Component
+ * Props:
+ * - onNavigateToRegister: Function to switch the view to the registration page
+ * - onBackToLanding: Function to return the user to the landing page
+ */
 export default function LoginPage({ onNavigateToRegister, onBackToLanding }) {
+  // --- STATE MANAGEMENT ---
+  // Stores the user's email input
   const [email, setEmail] = useState('');
+  // Stores the user's password input
   const [password, setPassword] = useState('');
+  // Tracks if the login request is currently in progress (to show loading states)
   const [loading, setLoading] = useState(false);
 
+  // --- LOGIC / EVENT HANDLERS ---
   const handleLogin = async (e) => {
+    // Prevent the browser from refreshing the page on form submission
     e.preventDefault();
+    // Start loading state
     setLoading(true);
     
+    // Call Supabase Auth to sign in with email and password
     const { error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
 
+    // If Supabase returns an error (e.g., wrong password), show an alert
     if (error) {
       alert("Login Error: " + error.message);
     }
     
+    // Stop loading state regardless of success or failure
     setLoading(false);
   };
 
   return (
     <div className="login-wrapper">
+      {/* Injecting external Google Fonts */}
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
       </style>
 
-      {/* Brand Logo / Back Button */}
+      {/* Brand Logo / Back Button: Clicking this triggers the onBackToLanding prop */}
       <button className="vita-logo-btn" onClick={onBackToLanding}>
         Door<span>IQ</span>
       </button>
 
+      {/* Main UI Card */}
       <div className="glass-card">
         <div className="badge">Secure Gateway</div>
         <h1>Welcome Back</h1>
         <p className="subtitle">Enter your credentials to access the DoorIQ hub.</p>
         
+        {/* Login Form */}
         <form onSubmit={handleLogin} className="auth-form">
+          {/* Email Input Field */}
           <div className="input-group">
             <label>Email Address</label>
             <input 
               type="email" 
               placeholder="name@company.com" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
+              value={email} // Controlled component: value comes from state
+              onChange={(e) => setEmail(e.target.value)} // Update state on typing
               required 
             />
           </div>
 
+          {/* Password Input Field */}
           <div className="input-group">
             <label>Password</label>
             <input 
               type="password" 
               placeholder="••••••••" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
+              value={password} // Controlled component: value comes from state
+              onChange={(e) => setPassword(e.target.value)} // Update state on typing
               required 
             />
           </div>
 
+          {/* Submit Button: Disabled while the 'loading' state is true */}
           <button type="submit" disabled={loading} className="btn-primary">
+            {/* Conditional text: changes if the login is processing */}
             {loading ? 'Decrypting...' : 'Sign In to Portal'}
           </button>
         </form>
 
+        {/* Navigation to Registration */}
         <p className="footer-text">
           New to the ecosystem? 
           <span onClick={onNavigateToRegister}> Register Device</span>
         </p>
       </div>
 
+      {/* SCOPED CSS STYLING (Styled-JSX) */}
       <style jsx>{`
         .login-wrapper {
           min-height: 100vh;
           background-color: #050505;
+          /* Creates the subtle glowing background effect */
           background-image: radial-gradient(circle at 100% 100%, rgba(0, 212, 255, 0.1) 0%, transparent 40%),
                             radial-gradient(circle at 0% 0%, rgba(0, 212, 255, 0.08) 0%, transparent 40%);
           display: flex;
@@ -100,6 +127,7 @@ export default function LoginPage({ onNavigateToRegister, onBackToLanding }) {
         }
         .vita-logo-btn span { color: #00d4ff; }
 
+        /* The frosted glass effect */
         .glass-card {
           background: rgba(15, 15, 15, 0.6);
           backdrop-filter: blur(20px);
@@ -167,6 +195,7 @@ export default function LoginPage({ onNavigateToRegister, onBackToLanding }) {
           transform: translateY(-2px);
           box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3);
         }
+        /* Style for when the button is clicking/loading */
         .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
         .footer-text { margin-top: 25px; font-size: 0.85rem; color: #64748b; }

@@ -503,7 +503,7 @@ export default function Dashboard({ onNavigate }) {
 
           <div className="video-vault">
             <div className="vault-header">
-               <h3 style={{margin:0}}>📁 Captured Clips</h3>
+               <h3 style={{margin:0}}>📁 Captured Clips & Audios</h3>
                <button 
                  onClick={fetchAllVideos} 
                  style={{ background: 'none', border: 'none', color: '#00d4ff', cursor: 'pointer', fontSize: '1.2rem', transition: 'transform 0.3s ease', display: 'flex', alignItems: 'center' }}

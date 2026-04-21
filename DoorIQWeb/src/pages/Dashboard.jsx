@@ -96,6 +96,7 @@ export default function Dashboard({ onNavigate }) {
 
   // Handle manual "Go Offline" click
   const handleGoOffline = () => {
+    console.log("Disconnecting from the room ...")
     // Stop the local mic hardware
     if (localAudioTrackRef.current) {
         localAudioTrackRef.current.stop();
@@ -103,6 +104,10 @@ export default function Dashboard({ onNavigate }) {
     }
     if (roomRef.current) {
       roomRef.current.disconnect();
+      console.log("Disconnected from the room!")
+      console.log("Sending signals to the Device ...")
+      triggerCommand("stop_livestream",null) //this function checks the error internally and displays them on the console 
+      console.log("Signal is sent to the device!")
     }
     setIsLiveRequested(false);
     setIsLiveKitConnected(false);
@@ -162,6 +167,11 @@ export default function Dashboard({ onNavigate }) {
       console.log("Successfully connected to LiveKit!"); 
       setIsLiveKitConnected(true);
 
+      //Sending signal to the supabase
+      console.log("Sending signal to the Device ...");
+      triggerCommand("start_livestream",null);
+      console.log("signal succesfully sent!")
+      
       // --- INITIALIZE LOCAL MICROPHONE ---
       try {
         const audioTrack = await createLocalAudioTrack({
@@ -337,6 +347,36 @@ export default function Dashboard({ onNavigate }) {
       .limit(4);
     if (data) setEvents(data);
   }
+
+  // ActionName can be speak,camera,typed_message,start_livestream,stop_livestream
+  // the text can be from one of the premade texts or just a typedin text or be none
+  async function triggerCommand(actionName, text) {
+  if (!homeId || isProcessingAction.current) return;
+  isProcessingAction.current = true;
+  try {
+    // Wrap text in an object to match your jsonb structure: {"text": "..."}
+    // If text is null, you might want to send an empty object {} or null
+    const payloadValue = text ? { text: text } : {};
+
+    const { error } = await supabase
+      .from('commands')
+      .insert([
+        { 
+          type: actionName, 
+          home_id: homeId, 
+          payload: payloadValue 
+        }
+      ]);
+
+    if (error) throw error;
+
+  } catch (e) {
+    console.error("Supabase insert failed:", e.message);
+  } finally {
+    // Debounce to prevent double-clicks
+    setTimeout(() => { isProcessingAction.current = false; }, 1500);
+  }
+}
 
   async function triggerAction(actionName) {
     if (!homeId || isProcessingAction.current) return;

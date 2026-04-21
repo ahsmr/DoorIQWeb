@@ -28,8 +28,9 @@ export default function Dashboard({ onNavigate }) {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  // --- Fecth the videos ---
+  // --- Fetch the videos & audios ---
   const [videos, setVideos] = useState([]);
+  const [audios, setAudios] = useState([]); 
   const [fetchingVideos, setFetchingVideos] = useState(false);
 
   const holdTimerRef = useRef(null);
@@ -215,7 +216,13 @@ export default function Dashboard({ onNavigate }) {
   const startSupabaseRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      
+      // Check for supported types
+      const mimeType = MediaRecorder.isTypeSupported('audio/mp4') 
+        ? 'audio/mp4' 
+        : 'audio/webm'; // Fallback if mp4 isn't supported
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -224,17 +231,18 @@ export default function Dashboard({ onNavigate }) {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const fileName = `${homeId}/voice_note_${Date.now()}.webm`;
+        // Use the dynamic mimeType here
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        const fileName = `${homeId}/voice_note_${Date.now()}.${extension}`;
         
         const { error } = await supabase.storage
           .from('camera-video') 
           .upload(fileName, audioBlob);
 
         if (error) console.error("Upload failed:", error);
-        else {
-          triggerAction('voice_note');
-        }
+        else triggerAction('voice_note');
+
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -252,6 +260,7 @@ export default function Dashboard({ onNavigate }) {
     }
   };
 
+  // --- UPDATED: Distinguish between Videos and Audios ---
   async function fetchAllVideos() {
     if (!homeId) return; // Don't run this if the user is homeless
     setFetchingVideos(true);
@@ -259,37 +268,55 @@ export default function Dashboard({ onNavigate }) {
       const { data: files, error: listError } = await supabase.storage
         .from('camera-video')
         .list(homeId, {
-          limit: 20,
+          limit: 40, // Increased limit slightly so we can grab both videos and audios comfortably
           sortBy: { column: 'created_at', order: 'desc' }
         });
 
       if (listError) throw listError;
 
       if (files && files.length > 0) {
-        const videoFiles = files.filter(f => f.name.endsWith('.mp4') || f.name.endsWith('.mov') || f.name.endsWith('.webm'));
-        const videoPaths = videoFiles.map(f => `${homeId}/${f.name}`);
+        const videoFiles = files.filter(f => f.name.endsWith('.mp4') || f.name.endsWith('.mov'));
+        // Include .webm in audioFiles based on your recording logic above
+        const audioFiles = files.filter(f => f.name.startsWith('voice') || f.name.endsWith('.webm')); 
 
-        const { data: signedUrls, error: signedError } = await supabase.storage
-          .from('camera-video')
-          .createSignedUrls(videoPaths, 3600);
+        // Handle Videos
+        if (videoFiles.length > 0) {
+          const videoPaths = videoFiles.map(f => `${homeId}/${f.name}`);
+          const { data: signedUrls, error: signedError } = await supabase.storage
+            .from('camera-video')
+            .createSignedUrls(videoPaths, 3600);
 
-        if (signedError) throw signedError;
+          if (signedError) throw signedError;
 
-        const videosWithLinks = videoFiles.map((file, index) => ({
-          ...file,
-          url: signedUrls[index].signedUrl
-        }));
+          const videosWithLinks = videoFiles.map((file, index) => ({
+            ...file,
+            url: signedUrls[index].signedUrl
+          }));
+          setVideos(videosWithLinks);
+        } else {
+          setVideos([]);
+        }
 
-        setVideos(videosWithLinks);
+        // Handle Audios
+        setAudios(audioFiles);
+
       } else {
         setVideos([]);
+        setAudios([]);
       }
     } catch (err) {
-      console.error("Video fetch error:", err);
+      console.error("Media fetch error:", err);
     } finally {
       setFetchingVideos(false);
     }
   }
+
+  // --- NEW: Play audio on Raspberry Pi ---
+  const playAudioOnDevice = (fileName) => {
+    // Sending the file path to the Raspberry Pi via the commands table
+    const filePath = `${homeId}/${fileName}`;
+    triggerCommand('play_audio', filePath);
+  };
 
   async function initializeDashboard() {
     setLoading(true);
@@ -348,7 +375,7 @@ export default function Dashboard({ onNavigate }) {
     if (data) setEvents(data);
   }
 
-  // ActionName can be speak,camera,typed_message,start_livestream,stop_livestream
+  // ActionName can be speak,camera,typed_message,start_livestream,stop_livestream, play_audio
   // the text can be from one of the premade texts or just a typedin text or be none
   async function triggerCommand(actionName, text) {
   if (!homeId || isProcessingAction.current) return;
@@ -447,14 +474,14 @@ export default function Dashboard({ onNavigate }) {
 
         .video-vault { background: #0f0f0f; border-radius: 24px; padding: 25px; margin-top: 25px; border: 1px solid #1f1f1f; }
         .vault-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; max-height: 350px; overflow-y: auto; padding-right: 5px; }
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; max-height: 350px; overflow-y: auto; padding-right: 5px; margin-bottom: 20px; }
         .video-item { background: #141414; border-radius: 16px; overflow: hidden; border: 1px solid #222; cursor: pointer; transition: 0.2s; position: relative; }
         .video-item:hover { border-color: #00d4ff; transform: translateY(-3px); }
         .video-item video { width: 100%; aspect-ratio: 1; object-fit: cover; opacity: 0.6; }
         .video-item:hover video { opacity: 1; }
         .vid-info { padding: 10px; }
         .vid-info p { margin: 0; font-size: 0.7rem; font-weight: 600; }
-        .vid-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; color: #00d4ff; }
+        .vid-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; color: #00d4ff; z-index: 5;}
 
         /* Modified Mic styles for Live Mic inside screen */
         .live-mic-container { position: absolute; bottom: 20px; left: 20px; z-index: 30; display: flex; align-items: center; gap: 10px; }
@@ -554,21 +581,48 @@ export default function Dashboard({ onNavigate }) {
                  ↻
                </button>            
             </div>
-            <div className="video-grid">
-               {fetchingVideos ? <p style={{color:'#444'}}>Scanning Vault...</p> : 
-                videos.length === 0 ? <p style={{color:'#444', fontSize:'0.8rem'}}>No clips found for this home.</p> :
-                videos.map((vid, i) => (
-                  <div key={i} className="video-item" onClick={() => window.open(vid.url, '_blank')}>
-                    <span className="vid-badge">REC</span>
-                    <video src={vid.url} preload="metadata" />
-                    <div className="vid-info">
-                       <p>{new Date(vid.created_at).toLocaleDateString()}</p>
-                       <p style={{color:'#64748b'}}>{new Date(vid.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
-                    </div>
-                  </div>
-                ))
-               }
-            </div>
+            
+            {fetchingVideos ? <p style={{color:'#444'}}>Scanning Vault...</p> : (
+              <>
+                {/* --- VIDEO SECTION --- */}
+                <h4 style={{color: '#64748b', marginTop: 0, marginBottom: '10px'}}>📹 Video Clips</h4>
+                <div className="video-grid">
+                  {videos.length === 0 ? <p style={{color:'#444', fontSize:'0.8rem'}}>No video clips found.</p> :
+                    videos.map((vid, i) => (
+                      <div key={`vid-${i}`} className="video-item" onClick={() => window.open(vid.url, '_blank')}>
+                        <span className="vid-badge">REC</span>
+                        <video src={vid.url} preload="metadata" />
+                        <div className="vid-info">
+                          <p>{new Date(vid.created_at).toLocaleDateString()}</p>
+                          <p style={{color:'#64748b'}}>{new Date(vid.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                        </div>
+                      </div>
+                    ))
+                  }
+                </div>
+
+                {/* --- AUDIO SECTION --- */}
+                <h4 style={{color: '#64748b', marginTop: '10px', marginBottom: '10px'}}>🎙️ Voice Notes (Click to Play on Pi)</h4>
+                <div className="video-grid">
+                  {audios.length === 0 ? <p style={{color:'#444', fontSize:'0.8rem'}}>No voice notes found.</p> :
+                    audios.map((aud, i) => (
+                      <div 
+                        key={`aud-${i}`} 
+                        className="video-item" 
+                        onClick={() => playAudioOnDevice(aud.name)}
+                        style={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#111', padding: '15px'}}
+                      >
+                        <span style={{fontSize: '2rem', marginBottom: '5px'}}>🔊</span>
+                        <div className="vid-info" style={{textAlign: 'center', width: '100%'}}>
+                          <p>{new Date(aud.created_at).toLocaleDateString()}</p>
+                          <p style={{color:'#64748b'}}>{new Date(aud.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                        </div>
+                      </div>
+                    ))
+                  }
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -588,7 +642,7 @@ export default function Dashboard({ onNavigate }) {
                     onMouseUp={resetHold}
                     onMouseLeave={resetHold}
                     onTouchStart={(e) => handleStart(e, 'unlock')} 
-                    onTouchEnd={resetHold}                         
+                    onTouchEnd={resetHold}                        
                   >
                     <div className="progress-bar" style={{ width: `${unlockProgress}%` }}></div>
                     <span className="btn-label">

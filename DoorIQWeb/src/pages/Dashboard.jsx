@@ -12,6 +12,7 @@ export default function Dashboard({ onNavigate }) {
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingNote, setIsRecordingNote] = useState(false); // For Supabase Recording
   // --- Supabase HomeId ---
+  const [availableHomes, setAvailableHomes] = useState([]);
   const [homeId, setHomeId] = useState(null); 
   // --- get the invites if there are any ---
   const [invites, setInvites] = useState([]);
@@ -324,16 +325,19 @@ export default function Dashboard({ onNavigate }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: membership } = await supabase
+      const { data: memberships } = await supabase
         .from('home_members')
-        .select('home_id')
+        .select('home_id, homes(name)')
         .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle();
+        .eq('status', 'active');
 
-      if (membership) {
-        setHomeId(membership.home_id);
-        fetchEvents(membership.home_id);
+      if (memberships && memberships.length > 0) {
+        setAvailableHomes(memberships);
+        // If there's no homeId currently set, default to the first one
+        if (!homeId) {
+          setHomeId(memberships[0].home_id);
+          fetchEvents(memberships[0].home_id);
+        }
       }
     } catch (err) {
       console.error("Init error:", err);
@@ -459,6 +463,10 @@ export default function Dashboard({ onNavigate }) {
         .settings-btn { background: #111; border: 1px solid #222; padding: 10px; border-radius: 12px; cursor: pointer; font-size: 1.2rem; color: white; transition: 0.2s; }
         .settings-btn:hover { border-color: #00d4ff; }
         
+        /* NEW: Dropdown CSS */
+        .home-selector { background: #111; border: 1px solid #222; padding: 8px 16px; border-radius: 12px; color: white; font-family: inherit; font-weight: 600; cursor: pointer; outline: none; transition: 0.2s; }
+        .home-selector:hover, .home-selector:focus { border-color: #00d4ff; }
+
         .main-content { display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px; }
         .video-card { background: #000; border-radius: 24px; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); aspect-ratio: 16/9; }
         .video-feed { height: 100%; display: flex; align-items: center; justify-content: center; color: #444; position: relative; }
@@ -512,6 +520,25 @@ export default function Dashboard({ onNavigate }) {
 
       <nav className="dash-nav">
         <div className="logo">Door<span>IQ</span></div>
+        
+        {/* NEW: Dropdown to select the active home */}
+        {availableHomes.length > 0 && (
+          <select 
+            className="home-selector"
+            value={homeId || ''} 
+            onChange={(e) => {
+              setHomeId(e.target.value);
+              fetchEvents(e.target.value); 
+            }}
+          >
+            {availableHomes.map((membership) => (
+              <option key={membership.home_id} value={membership.home_id}>
+                {membership.homes?.name || 'My Home'}
+              </option>
+            ))}
+          </select>
+        )}
+
         <button className="settings-btn" onClick={onNavigate}>⚙️</button>
       </nav>
 

@@ -110,16 +110,24 @@ export default function SettingPage({ onNavigate }) {
 
       if (homeErr) throw homeErr;
 
-      await supabase.from('home_members').insert([{ 
+      // 🔴 FIX: Capture the error from the home_members insert
+      const { error: memberErr } = await supabase.from('home_members').insert([{ 
         home_id: home.id, user_id: user.id, role: 'owner', status: 'active' 
       }]);
+      
+      // 🔴 FIX: Throw the error so the catch block can alert you
+      if (memberErr) throw memberErr;
       
       // Automatically switch to the newly created home
       handleSwitchHome(home.id);
       
       setNewHomeName('');
       fetchInitialData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { 
+      // This will now show you EXACTLY why it failed!
+      alert(err.message); 
+      console.error("Creation Error:", err);
+    }
     finally { setLoading(false); }
   };
 

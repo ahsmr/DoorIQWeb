@@ -300,26 +300,28 @@ export default function SettingPage({ onNavigate }) {
               </div>
 
               <div className="home-details">
-                {isOwner && (
-                  <div className="owner-controls-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px', marginTop: '10px' }}>
-                    
-                    {/* Left Column: Members */}
-                    <div className="column">
-                      <h4>Access Members</h4>
-                      <div className="member-list">
-                        {homeMembers.map(m => (
-                          <div key={m.id} className="member-item">
-                            <div className="setting-info">
-                              <span className="label email-display">{`User: ${m.user_id.slice(0, 8)}...`}</span>
-                              <span className={`status-tag ${m.status}`}>{m.status}</span>
-                            </div>
-                            {m.role !== 'owner' && (
-                              <button className="btn-remove" onClick={() => handleRemoveMember(m.id, homeId)}>Remove</button>
-                            )}
+                <div className="owner-controls-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px', marginTop: '10px' }}>
+                  
+                  {/* Left Column: Members - Visible to everyone */}
+                  <div className="column">
+                    <h4>Access Members</h4>
+                    <div className="member-list">
+                      {homeMembers.map(m => (
+                        <div key={m.id} className="member-item">
+                          <div className="setting-info">
+                            <span className="label email-display">{`User: ${m.user_id.slice(0, 8)}...`}</span>
+                            <span className={`status-tag ${m.status}`}>{m.status}</span>
                           </div>
-                        ))}
-                      </div>
+                          {/* Only show remove button to Owners */}
+                          {isOwner && m.role !== 'owner' && (
+                            <button className="btn-remove" onClick={() => handleRemoveMember(m.id, homeId)}>Remove</button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
 
+                    {/* Only show invite section to Owners */}
+                    {isOwner && (
                       <div className="invite-section">
                         <div className="input-group">
                           <input 
@@ -331,23 +333,26 @@ export default function SettingPage({ onNavigate }) {
                           <button onClick={() => handleInviteMember(homeId)} disabled={loading}>Invite</button>
                         </div>
                       </div>
+                    )}
+                  </div>
+
+                  {/* Right Column: Devices - Visible to everyone */}
+                  <div className="column">
+                    <h4>Linked Devices</h4>
+                    <div className="member-list">
+                      {homeDevices.map(device => (
+                        <div key={device.id} className="member-item">
+                          <div className="setting-info">
+                            <span className="label" style={{ color: '#00ffa3' }}>{device.device_name || "Smart Node"}</span>
+                            <span className="desc" style={{ fontSize: '0.7rem' }}>{device.id.slice(0, 13)}...</span>
+                          </div>
+                        </div>
+                      ))}
+                      {homeDevices.length === 0 && <p className="desc" style={{ fontStyle: 'italic', padding: '10px' }}>No hardware linked.</p>}
                     </div>
 
-                    {/* Right Column: Devices */}
-                    <div className="column">
-                      <h4>Linked Devices</h4>
-                      <div className="member-list">
-                        {homeDevices.map(device => (
-                          <div key={device.id} className="member-item">
-                            <div className="setting-info">
-                              <span className="label" style={{ color: '#00ffa3' }}>{device.device_name || "Smart Node"}</span>
-                              <span className="desc" style={{ fontSize: '0.7rem' }}>{device.id.slice(0, 13)}...</span>
-                            </div>
-                          </div>
-                        ))}
-                        {homeDevices.length === 0 && <p className="desc" style={{ fontStyle: 'italic', padding: '10px' }}>No hardware linked.</p>}
-                      </div>
-
+                    {/* Only show link section to Owners */}
+                    {isOwner && (
                       <div className="invite-section">
                         <div className="input-group">
                           <input 
@@ -359,13 +364,13 @@ export default function SettingPage({ onNavigate }) {
                           <button onClick={() => handleClaimDevice(homeId)} disabled={loading} style={{ background: '#00ffa3', color: '#000' }}>Link</button>
                         </div>
                       </div>
-                    </div>
-
+                    )}
                   </div>
-                )}
+
+                </div>
                 
                 {!isOwner && (
-                  <p className="desc" style={{ marginTop: '10px' }}>
+                  <p className="desc" style={{ marginTop: '20px', textAlign: 'center', borderTop: '1px solid #1f1f1f', paddingTop: '10px' }}>
                     You are a member of this home. Contact the owner to manage settings.
                   </p>
                 )}

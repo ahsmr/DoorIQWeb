@@ -7,10 +7,9 @@ export default function Dashboard({ onNavigate }) {
   // --- the constants needed for the frontend ---
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [unlockProgress, setUnlockProgress] = useState(0);
-  const [isHolding, setIsHolding] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingNote, setIsRecordingNote] = useState(false); // For Supabase Recording
+  
   // --- Supabase HomeId ---
   const [availableHomes, setAvailableHomes] = useState([]);
   const [homeId, setHomeId] = useState(null); 
@@ -34,7 +33,6 @@ export default function Dashboard({ onNavigate }) {
   const [audios, setAudios] = useState([]); 
   const [fetchingVideos, setFetchingVideos] = useState(false);
 
-  const holdTimerRef = useRef(null);
   const isProcessingAction = useRef(false); // Actions for the supabase
 
   useEffect(() => { // initialize the dashboard and fetch invites if there are any!!
@@ -312,11 +310,17 @@ export default function Dashboard({ onNavigate }) {
     }
   }
 
-  // --- NEW: Play audio on Raspberry Pi ---
+  // --- Play audio instantly on Raspberry Pi ---
   const playAudioOnDevice = (fileName) => {
-    // Sending the file path to the Raspberry Pi via the commands table
     const filePath = `${homeId}/${fileName}`;
     triggerCommand('play_audio', filePath);
+  };
+
+  // --- NEW: Set audio as standard on Raspberry Pi ---
+  const setStandardAudio = (fileName) => {
+    const filePath = `${homeId}/${fileName}`;
+    // Make sure your Raspberry Pi python script is listening for 'set_standard_audio'
+    triggerCommand('set_standard_audio', filePath); 
   };
 
   async function initializeDashboard() {
@@ -379,7 +383,7 @@ export default function Dashboard({ onNavigate }) {
     if (data) setEvents(data);
   }
 
-  // ActionName can be speak,camera,typed_message,start_livestream,stop_livestream, play_audio
+  // ActionName can be speak,camera,typed_message,start_livestream,stop_livestream, play_audio, set_standard_audio
   // the text can be from one of the premade texts or just a typedin text or be none
   async function triggerCommand(actionName, text) {
   if (!homeId || isProcessingAction.current) return;
@@ -421,34 +425,9 @@ export default function Dashboard({ onNavigate }) {
     }
   }
 
-  const startHold = () => {
-    if (isProcessingAction.current) return;
-    setIsHolding(true);
-    const duration = 1200; 
-    const interval = 10;
-    const step = (100 / (duration / interval));
-    holdTimerRef.current = setInterval(() => {
-      setUnlockProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(holdTimerRef.current);
-          triggerAction('unlock');
-          return 100;
-        }
-        return prev + step;
-      });
-    }, interval);
-  };
-
-  const resetHold = () => {
-    if (holdTimerRef.current) clearInterval(holdTimerRef.current);
-    setIsHolding(false);
-    setUnlockProgress(0);
-  };
-
   const handleStart = (e, type) => { // To be accessible for mouse as well as touch
     if (e.type === 'touchstart') e.preventDefault();
-    if (type === 'unlock') startHold();
-    else if (type === 'mic') toggleMic(true);
+    if (type === 'mic') toggleMic(true);
     else if (type === 'record_supabase') startSupabaseRecording();
   };
 
@@ -491,19 +470,18 @@ export default function Dashboard({ onNavigate }) {
         .vid-info p { margin: 0; font-size: 0.7rem; font-weight: 600; }
         .vid-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; color: #00d4ff; z-index: 5;}
 
+        /* Audio Action Buttons */
+        .audio-action-btn { flex: 1; padding: 6px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer; transition: 0.2s; text-align: center; }
+        .audio-action-btn.primary { background: #00d4ff; color: #000; border: none; }
+        .audio-action-btn.primary:hover { background: #00b8e6; }
+        .audio-action-btn.secondary { background: transparent; color: #00d4ff; border: 1px solid #00d4ff; }
+        .audio-action-btn.secondary:hover { background: rgba(0, 212, 255, 0.1); }
+
         /* Modified Mic styles for Live Mic inside screen */
         .live-mic-container { position: absolute; bottom: 20px; left: 20px; z-index: 30; display: flex; align-items: center; gap: 10px; }
         .record-ring { width: 45px; height: 45px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; transition: 0.3s; backdrop-filter: blur(5px); }
         .record-ring.active { background: #00d4ff; box-shadow: 0 0 20px #00d4ff; transform: scale(1.1); }
         .mic-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; }
-
-        .hold-btn { width: 100%; height: 74px; background: #111; border: 1px solid #222; border-radius: 16px; position: relative; overflow: hidden; cursor: pointer; color: white; font-weight: 800; transition: transform 0.1s; }
-        .hold-btn:active { transform: scale(0.98); }
-        .progress-bar { position: absolute; left: 0; top: 0; height: 100%; background: #00d4ff; opacity: 0.8; transition: width 0.05s linear; }
-        .btn-label { position: relative; z-index: 2; pointer-events: none; }
-        
-        .btn-alarm { width: 100%; margin-top: 15px; padding: 18px; border-radius: 16px; border: 1px solid #420000; background: #210000; color: #ff4d4d; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        .btn-alarm:hover { background: #310000; }
 
         .btn-supabase-record { width: 100%; margin-top: 15px; padding: 18px; border-radius: 16px; border: 1px solid #00d4ff; background: rgba(0, 212, 255, 0.05); color: #00d4ff; font-weight: 700; cursor: pointer; transition: 0.2s; }
         .btn-supabase-record.active { background: #00d4ff; color: #000; }
@@ -629,20 +607,37 @@ export default function Dashboard({ onNavigate }) {
                 </div>
 
                 {/* --- AUDIO SECTION --- */}
-                <h4 style={{color: '#64748b', marginTop: '10px', marginBottom: '10px'}}>🎙️ Voice Notes (Click to Play on Pi)</h4>
+                <h4 style={{color: '#64748b', marginTop: '10px', marginBottom: '10px'}}>🎙️ Voice Notes</h4>
                 <div className="video-grid">
                   {audios.length === 0 ? <p style={{color:'#444', fontSize:'0.8rem'}}>No voice notes found.</p> :
                     audios.map((aud, i) => (
                       <div 
                         key={`aud-${i}`} 
                         className="video-item" 
-                        onClick={() => playAudioOnDevice(aud.name)}
-                        style={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#111', padding: '15px'}}
+                        style={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#111', padding: '15px', cursor: 'default'}}
                       >
                         <span style={{fontSize: '2rem', marginBottom: '5px'}}>🔊</span>
-                        <div className="vid-info" style={{textAlign: 'center', width: '100%'}}>
+                        <div className="vid-info" style={{textAlign: 'center', width: '100%', padding: '0', marginBottom: '15px'}}>
                           <p>{new Date(aud.created_at).toLocaleDateString()}</p>
                           <p style={{color:'#64748b'}}>{new Date(aud.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</p>
+                        </div>
+                        
+                        {/* Audio Controls */}
+                        <div style={{display: 'flex', gap: '8px', width: '100%'}}>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); playAudioOnDevice(aud.name); }}
+                            className="audio-action-btn primary"
+                            title="Play immediately on device"
+                          >
+                            Play Now
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setStandardAudio(aud.name); }}
+                            className="audio-action-btn secondary"
+                            title="Set as default audio message"
+                          >
+                            Standard
+                          </button>
                         </div>
                       </div>
                     ))
@@ -662,22 +657,6 @@ export default function Dashboard({ onNavigate }) {
             </div>
           ) : (
             <>
-              <div className="unlock-container">
-                 <button 
-                    className="hold-btn" 
-                    onMouseDown={(e) => handleStart(e, 'unlock')} 
-                    onMouseUp={resetHold}
-                    onMouseLeave={resetHold}
-                    onTouchStart={(e) => handleStart(e, 'unlock')} 
-                    onTouchEnd={resetHold}                        
-                  >
-                    <div className="progress-bar" style={{ width: `${unlockProgress}%` }}></div>
-                    <span className="btn-label">
-                      {unlockProgress >= 100 ? "ACCESS GRANTED" : "HOLD TO UNLOCK"}
-                    </span>
-                 </button>
-              </div>
-
               {/* SUPABASE RECORD BUTTON */}
               <button 
                 className={`btn-supabase-record ${isRecordingNote ? 'active' : ''}`}
@@ -689,8 +668,6 @@ export default function Dashboard({ onNavigate }) {
               >
                 {isRecordingNote ? "🔴 SENDING VOICE..." : "🎙️ HOLD TO RECORD VOICE"}
               </button>
-
-              <button className="btn-alarm" onClick={() => triggerAction('alarm')}>🚨 ALERT ALARM</button>
               
               <div className="activity-card">
                 <h3 style={{marginTop: 0, marginBottom: 20}}>Recent Activity</h3>

@@ -90,8 +90,8 @@ const LandingPage = ({ onGetStarted }) => {
             <div className="tag">Automation</div>
             <h3>Prerecorded Intelligence</h3>
             <p>
-              Not available? Set custom voice notes to play automatically when the doorbell button is pressed. 
-              Manage your library of "Standard" and "Custom" responses from your dashboard.
+              Not available? Record custom voice notes to play automatically when the doorbell button is pressed. 
+              Manage your library of "Play now" and "Standard" responses from your dashboard.
             </p>
           </div>
           <div className="feature-ui-box">

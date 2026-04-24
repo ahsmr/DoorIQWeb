@@ -11,23 +11,20 @@ export default function SettingPage({ onNavigate }) {
   const [membersByHome, setMembersByHome] = useState({}); 
   const [pendingInvites, setPendingInvites] = useState([]); 
   
-  // App Context State (Which home is the user currently viewing?)
+  // App Context State
   const [activeHomeId, setActiveHomeId] = useState(localStorage.getItem('activeDoorIQHome') || null);
   
   // Input states
   const [newHomeName, setNewHomeName] = useState('');
   const [inviteInputs, setInviteInputs] = useState({}); 
+  const [deviceInputs, setDeviceInputs] = useState({}); 
   const [editingHomeId, setEditingHomeId] = useState(null);
   const [editHomeName, setEditHomeName] = useState('');
 
-  // Fetch all data when the page loads
   useEffect(() => {
     fetchInitialData();
   }, []);
 
-  /**
-   * --- 2. DATA LOADING ---
-   */
   async function fetchInitialData() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -41,9 +38,6 @@ export default function SettingPage({ onNavigate }) {
 
       if (homeMemberships && homeMemberships.length > 0) {
         setUserHomes(homeMemberships);
-        
-        // Default logic: If no active home is set, or the previously set one was deleted,
-        // default to the first home in the list.
         const currentSavedHome = localStorage.getItem('activeDoorIQHome');
         const isSavedHomeStillValid = homeMemberships.some(m => m.homes.id === currentSavedHome);
         
@@ -53,7 +47,6 @@ export default function SettingPage({ onNavigate }) {
           localStorage.setItem('activeDoorIQHome', firstHomeId);
         }
 
-        // Fetch members for each home
         homeMemberships.forEach(membership => {
           fetchHomeMembers(membership.homes.id);
         });
@@ -63,7 +56,6 @@ export default function SettingPage({ onNavigate }) {
         localStorage.removeItem('activeDoorIQHome');
       }
 
-      // Check for pending invites
       const { data: invites } = await supabase
         .from('home_members')
         .select('id, homes(name)')
@@ -87,14 +79,9 @@ export default function SettingPage({ onNavigate }) {
     }
   }
 
-  // --- 4. ACTION HANDLERS ---
-
-  // --- NEW: SWITCH ACTIVE HOME ---
   const handleSwitchHome = (homeId) => {
     setActiveHomeId(homeId);
     localStorage.setItem('activeDoorIQHome', homeId);
-    // Optional: If your app uses a global context/provider, you might call a prop here like onContextChange(homeId)
-    // or trigger a brief notification/toast confirming the switch.
   };
 
   const handleCreateHome = async () => {
@@ -102,7 +89,6 @@ export default function SettingPage({ onNavigate }) {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
       const { data: home, error: homeErr } = await supabase
         .from('homes')
         .insert([{ name: newHomeName, created_by: user.id }])
@@ -110,23 +96,17 @@ export default function SettingPage({ onNavigate }) {
 
       if (homeErr) throw homeErr;
 
-      // 🔴 FIX: Capture the error from the home_members insert
       const { error: memberErr } = await supabase.from('home_members').insert([{ 
         home_id: home.id, user_id: user.id, role: 'owner', status: 'active' 
       }]);
       
-      // 🔴 FIX: Throw the error so the catch block can alert you
       if (memberErr) throw memberErr;
       
-      // Automatically switch to the newly created home
       handleSwitchHome(home.id);
-      
       setNewHomeName('');
       fetchInitialData();
     } catch (err) { 
-      // This will now show you EXACTLY why it failed!
       alert(err.message); 
-      console.error("Creation Error:", err);
     }
     finally { setLoading(false); }
   };
@@ -135,7 +115,6 @@ export default function SettingPage({ onNavigate }) {
     if (!editHomeName) return alert("Home name cannot be empty.");
     setLoading(true);
     const { error } = await supabase.from('homes').update({ name: editHomeName }).eq('id', homeId);
-
     if (error) alert(error.message);
     else {
       setEditingHomeId(null);
@@ -146,10 +125,9 @@ export default function SettingPage({ onNavigate }) {
   };
 
   const handleDeleteHome = async (homeId) => {
-    if (!window.confirm("Are you sure you want to permanently delete this home? All members will lose access.")) return;
+    if (!window.confirm("Are you sure?")) return;
     setLoading(true);
     const { error } = await supabase.from('homes').delete().eq('id', homeId);
-
     if (error) alert(error.message);
     else fetchInitialData();
     setLoading(false);
@@ -166,11 +144,9 @@ export default function SettingPage({ onNavigate }) {
     const inviteUserId = inviteInputs[homeId];
     if (!inviteUserId) return alert("Provide a User UUID.");
     setLoading(true);
-    
     const { error } = await supabase.from('home_members').insert([{ 
       home_id: homeId, user_id: inviteUserId, role: 'member', status: 'pending' 
     }]);
-
     if (error) alert(error.message);
     else {
       setInviteInputs(prev => ({ ...prev, [homeId]: '' }));
@@ -178,6 +154,37 @@ export default function SettingPage({ onNavigate }) {
       alert("Invite Sent!");
     }
     setLoading(false);
+  };
+
+  /**
+   * --- FIXED CLAIM DEVICE HANDLER ---
+   * Matching your DB screenshot: using column 'id' instead of 'device_id'
+   */
+  const handleClaimDevice = async (homeId) => {
+    const hardwareId = deviceInputs[homeId];
+    if (!hardwareId) return alert("Provide a Device ID.");
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('authorized_devices')
+        .update({ home_id: homeId })
+        .eq('id', hardwareId.trim()) // Matching 'id' column from your screenshot
+        .select();
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        alert("Device ID not found in system. Please ensure the UUID is correct.");
+      } else {
+        setDeviceInputs(prev => ({ ...prev, [homeId]: '' }));
+        alert("Device successfully linked to this home!");
+      }
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRemoveMember = async (membershipId, homeId) => {
@@ -195,7 +202,10 @@ export default function SettingPage({ onNavigate }) {
     setInviteInputs(prev => ({ ...prev, [homeId]: value }));
   };
 
-  // --- 5. RENDER ---
+  const handleDeviceInputChange = (homeId, value) => {
+    setDeviceInputs(prev => ({ ...prev, [homeId]: value }));
+  };
+
   return (
     <div className="settings-wrapper">
       <style>
@@ -232,7 +242,6 @@ export default function SettingPage({ onNavigate }) {
           </section>
         )}
 
-        {/* RENDER ALL HOMES */}
         {userHomes.map((userHome) => {
           const homeId = userHome.homes.id;
           const homeName = userHome.homes.name;
@@ -245,7 +254,6 @@ export default function SettingPage({ onNavigate }) {
               <div className="card-header" style={{ justifyContent: 'space-between', width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span className="icon">🏠</span>
-                  
                   {editingHomeId === homeId ? (
                     <div style={{ display: 'flex', gap: '5px' }}>
                       <input 
@@ -266,16 +274,10 @@ export default function SettingPage({ onNavigate }) {
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  
-                  {/* CONTEXT SWITCHER */}
                   {!isActiveContext && (
-                    <button className="btn-switch" onClick={() => handleSwitchHome(homeId)}>
-                      Switch to this Home
-                    </button>
+                    <button className="btn-switch" onClick={() => handleSwitchHome(homeId)}>Switch</button>
                   )}
-
                   <span className="value-tag">{userHome.role.toUpperCase()}</span>
-                  
                   {isOwner && editingHomeId !== homeId && (
                     <div className="owner-actions">
                       <button className="btn-text" onClick={() => { setEditingHomeId(homeId); setEditHomeName(homeName); }}>Rename</button>
@@ -293,9 +295,7 @@ export default function SettingPage({ onNavigate }) {
                       {homeMembers.map(m => (
                         <div key={m.id} className="member-item">
                           <div className="setting-info">
-                            <span className="label email-display">
-                              {`User ID: ${m.user_id.slice(0, 8)}...`}
-                            </span>
+                            <span className="label email-display">{`User ID: ${m.user_id.slice(0, 8)}...`}</span>
                             <span className={`status-tag ${m.status}`}>{m.status}</span>
                           </div>
                           {m.role !== 'owner' && (
@@ -316,6 +316,18 @@ export default function SettingPage({ onNavigate }) {
                         <button onClick={() => handleInviteMember(homeId)} disabled={loading}>Invite</button>
                       </div>
                     </div>
+
+                    <div className="invite-section" style={{ marginTop: '20px' }}>
+                      <div className="input-group">
+                        <input 
+                          type="text" 
+                          placeholder="Paste Device UUID to link..." 
+                          value={deviceInputs[homeId] || ''} 
+                          onChange={(e) => handleDeviceInputChange(homeId, e.target.value)} 
+                        />
+                        <button onClick={() => handleClaimDevice(homeId)} disabled={loading} style={{ background: '#00ffa3', color: '#000' }}>Link Device</button>
+                      </div>
+                    </div>
                   </div>
                 )}
                 
@@ -330,15 +342,12 @@ export default function SettingPage({ onNavigate }) {
         })}
 
         <section className="settings-card">
-           <div className="card-header">
-             <span className="icon">➕</span>
-             <h3>Create New Home</h3>
-           </div>
+           <div className="card-header"><span className="icon">➕</span><h3>Create New Home</h3></div>
            <div className="setup-home">
              <div className="input-group">
                <input 
                  type="text" 
-                 placeholder="New Home Name (e.g. Vacation House)" 
+                 placeholder="New Home Name" 
                  value={newHomeName} 
                  onChange={(e) => setNewHomeName(e.target.value)} 
                />
@@ -352,7 +361,7 @@ export default function SettingPage({ onNavigate }) {
           <div className="setting-row" style={{ borderBottom: 'none' }}>
             <div className="setting-info">
               <span className="label">Infrared (IR) Mode</span>
-              <span className="desc">Night vision toggle for camera nodes in {userHomes.find(h => h.homes.id === activeHomeId)?.homes.name || "this home"}.</span>
+              <span className="desc">Toggle for camera nodes.</span>
             </div>
             <label className="switch">
               <input type="checkbox" checked={irEnabled} onChange={() => setIrEnabled(!irEnabled)} />
@@ -363,7 +372,7 @@ export default function SettingPage({ onNavigate }) {
 
         <div className="action-footer">
           <button onClick={handleSignOut} className="btn-logout">Sign Out</button>
-          <p className="version">DoorIQ v1.1.0 | Multi-Home Enabled</p>
+          <p className="version">DoorIQ v2.0.1 | Multi-Home Enabled</p>
         </div>
       </div>
 
@@ -373,53 +382,42 @@ export default function SettingPage({ onNavigate }) {
         .logo { font-size: 1.5rem; font-weight: 800; }
         .logo span { color: #00d4ff; }
         .back-link { background: none; border: none; color: #94a3b8; font-weight: 600; cursor: pointer; }
-
         .page-title h1 { font-size: 2rem; font-weight: 800; margin: 0; }
         .page-title p { color: #64748b; margin-top: 5px; margin-bottom: 30px; }
-
         .settings-card { background: rgba(15, 15, 15, 0.6); border: 1px solid #1f1f1f; border-radius: 20px; padding: 25px; margin-bottom: 20px; transition: 0.3s; }
         .active-home-card { border-color: #00d4ff88; box-shadow: 0 0 15px #00d4ff11; }
         .alert-card { border: 1px solid #00d4ff44; background: linear-gradient(145deg, #00d4ff0a, #000); }
         .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid #1f1f1f; padding-bottom: 15px; }
         .card-header h3 { font-size: 1.2rem; margin: 0; display: flex; align-items: center; gap: 10px; }
-
         .active-badge { font-size: 0.65rem; background: #00d4ff; color: #000; padding: 3px 8px; border-radius: 10px; font-weight: 800; letter-spacing: 0.5px; }
-
         .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #1f1f1f; }
         .setting-info { display: flex; flex-direction: column; }
         .label { font-weight: 600; font-size: 0.95rem; }
         .email-display { color: #00d4ff; font-family: monospace; }
         .desc { font-size: 0.8rem; color: #64748b; }
-
         .value-tag { background: #1a1a1a; color: #94a3b8; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; display: inline-block; border: 1px solid #333;}
         .status-tag { font-size: 0.7rem; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
         .status-tag.pending { color: #ffab00; }
         .status-tag.active { color: #00ffa3; }
-
         .member-list { margin: 15px 0; display: flex; flex-direction: column; gap: 8px; }
         .member-item { display: flex; justify-content: space-between; align-items: center; background: #0a0a0a; padding: 12px; border-radius: 12px; border: 1px solid #111; }
-
         .input-group { display: flex; gap: 10px; margin-top: 15px; }
         input { flex: 1; background: #111; border: 1px solid #222; border-radius: 12px; padding: 12px; color: white; outline: none; }
         button { background: #00d4ff; color: black; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
-        
         .btn-switch { background: transparent; color: #00d4ff; border: 1px solid #00d4ff; padding: 6px 12px; font-size: 0.8rem; }
         .btn-switch:hover { background: #00d4ff22; }
         .btn-remove { background: #ff4d4d22; color: #ff4d4d; border: 1px solid #ff4d4d44; padding: 5px 12px; font-size: 0.8rem; }
         .btn-text { background: transparent; border: none; padding: 5px 10px; cursor: pointer; font-size: 0.8rem; color: #94a3b8; }
         .btn-text:hover { color: white; }
         .btn-cancel { background: transparent; color: white; border: 1px solid #333; }
-        
         h4 { font-size: 0.8rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px; }
-
         .switch { position: relative; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #222; transition: .4s; border-radius: 34px; }
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #00d4ff; }
         input:checked + .slider:before { transform: translateX(20px); }
-
         .action-footer { margin-top: 40px; text-align: center; }
         .btn-logout { background: transparent; color: #ff4d4d; border: 1px solid #ff4d4d44; padding: 10px 20px; border-radius: 12px; cursor: pointer; }
         .version { font-size: 0.75rem; color: #444; margin-top: 15px; }

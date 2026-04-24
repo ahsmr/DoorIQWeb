@@ -32,8 +32,19 @@ export default function App() {
 
   // 1. PUBLIC LANDING VIEW (The "About DoorIQ" introduction)
   if (showLanding && !session) {
-    return <LandingPage onGetStarted={() => setShowLanding(false)} />;
-  }
+  return (
+    <LandingPage 
+      onLogin={() => {
+        setAuthView('login');
+        setShowLanding(false);
+      }}
+      onGetStarted={() => {
+        setAuthView('register');
+        setShowLanding(false);
+      }} 
+    />
+  );
+}
 
   // 2. AUTH VIEW (Login or Register screens)
   if (!session) {

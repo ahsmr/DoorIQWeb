@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LandingPage = ({ onGetStarted }) => {
+const LandingPage = ({ onGetStarted, onLogin }) => {
   return (
     <div className="landing-wrapper">
       <style>
@@ -21,7 +21,8 @@ const LandingPage = ({ onGetStarted }) => {
           <a href="#ecosystem">Ecosystem</a>
         </div>
         <div className="auth-buttons">
-          <button onClick={onGetStarted} className="btn-login-link">Login</button>
+          {/* This button now specifically calls onLogin */}
+          <button onClick={onLogin} className="btn-login-link">Login</button>
           <button onClick={onGetStarted} className="btn-get-started">Get Started</button>
         </div>
       </nav>

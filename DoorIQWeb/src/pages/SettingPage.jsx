@@ -9,6 +9,7 @@ export default function SettingPage({ onNavigate }) {
   // Multi-home states
   const [userHomes, setUserHomes] = useState([]); 
   const [membersByHome, setMembersByHome] = useState({}); 
+  const [devicesByHome, setDevicesByHome] = useState({}); // Track devices per home
   const [pendingInvites, setPendingInvites] = useState([]); 
   
   // App Context State
@@ -49,6 +50,7 @@ export default function SettingPage({ onNavigate }) {
 
         homeMemberships.forEach(membership => {
           fetchHomeMembers(membership.homes.id);
+          fetchHomeDevices(membership.homes.id); // Check for matching home_id in devices
         });
       } else {
         setUserHomes([]);
@@ -76,6 +78,18 @@ export default function SettingPage({ onNavigate }) {
     
     if (!error) {
       setMembersByHome(prev => ({ ...prev, [homeId]: data || [] }));
+    }
+  }
+
+  // Matches home_id in authorized_devices with the current home
+  async function fetchHomeDevices(homeId) {
+    const { data, error } = await supabase
+      .from('authorized_devices')
+      .select(`id, device_name, home_id`) 
+      .eq('home_id', homeId);
+    
+    if (!error) {
+      setDevicesByHome(prev => ({ ...prev, [homeId]: data || [] }));
     }
   }
 
@@ -156,10 +170,6 @@ export default function SettingPage({ onNavigate }) {
     setLoading(false);
   };
 
-  /**
-   * --- FIXED CLAIM DEVICE HANDLER ---
-   * Matching your DB screenshot: using column 'id' instead of 'device_id'
-   */
   const handleClaimDevice = async (homeId) => {
     const hardwareId = deviceInputs[homeId];
     if (!hardwareId) return alert("Provide a Device ID.");
@@ -169,7 +179,7 @@ export default function SettingPage({ onNavigate }) {
       const { data, error } = await supabase
         .from('authorized_devices')
         .update({ home_id: homeId })
-        .eq('id', hardwareId.trim()) // Matching 'id' column from your screenshot
+        .eq('id', hardwareId.trim()) 
         .select();
 
       if (error) throw error;
@@ -178,6 +188,7 @@ export default function SettingPage({ onNavigate }) {
         alert("Device ID not found in system. Please ensure the UUID is correct.");
       } else {
         setDeviceInputs(prev => ({ ...prev, [homeId]: '' }));
+        fetchHomeDevices(homeId); // Refresh device list for this home
         alert("Device successfully linked to this home!");
       }
     } catch (err) {
@@ -248,6 +259,7 @@ export default function SettingPage({ onNavigate }) {
           const isOwner = userHome.role === 'owner';
           const isActiveContext = activeHomeId === homeId;
           const homeMembers = membersByHome[homeId] || [];
+          const homeDevices = devicesByHome[homeId] || [];
 
           return (
             <section key={userHome.id} className={`settings-card ${isActiveContext ? 'active-home-card' : ''}`}>
@@ -289,45 +301,66 @@ export default function SettingPage({ onNavigate }) {
 
               <div className="home-details">
                 {isOwner && (
-                  <div className="owner-controls">
-                    <h4>Member Access</h4>
-                    <div className="member-list">
-                      {homeMembers.map(m => (
-                        <div key={m.id} className="member-item">
-                          <div className="setting-info">
-                            <span className="label email-display">{`User ID: ${m.user_id.slice(0, 8)}...`}</span>
-                            <span className={`status-tag ${m.status}`}>{m.status}</span>
+                  <div className="owner-controls-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px', marginTop: '10px' }}>
+                    
+                    {/* Left Column: Members */}
+                    <div className="column">
+                      <h4>Access Members</h4>
+                      <div className="member-list">
+                        {homeMembers.map(m => (
+                          <div key={m.id} className="member-item">
+                            <div className="setting-info">
+                              <span className="label email-display">{`User: ${m.user_id.slice(0, 8)}...`}</span>
+                              <span className={`status-tag ${m.status}`}>{m.status}</span>
+                            </div>
+                            {m.role !== 'owner' && (
+                              <button className="btn-remove" onClick={() => handleRemoveMember(m.id, homeId)}>Remove</button>
+                            )}
                           </div>
-                          {m.role !== 'owner' && (
-                            <button className="btn-remove" onClick={() => handleRemoveMember(m.id, homeId)}>Remove</button>
-                          )}
+                        ))}
+                      </div>
+
+                      <div className="invite-section">
+                        <div className="input-group">
+                          <input 
+                            type="text" 
+                            placeholder="User UUID..." 
+                            value={inviteInputs[homeId] || ''} 
+                            onChange={(e) => handleInviteInputChange(homeId, e.target.value)} 
+                          />
+                          <button onClick={() => handleInviteMember(homeId)} disabled={loading}>Invite</button>
                         </div>
-                      ))}
-                    </div>
-
-                    <div className="invite-section">
-                      <div className="input-group">
-                        <input 
-                          type="text" 
-                          placeholder="Paste User UUID to invite..." 
-                          value={inviteInputs[homeId] || ''} 
-                          onChange={(e) => handleInviteInputChange(homeId, e.target.value)} 
-                        />
-                        <button onClick={() => handleInviteMember(homeId)} disabled={loading}>Invite</button>
                       </div>
                     </div>
 
-                    <div className="invite-section" style={{ marginTop: '20px' }}>
-                      <div className="input-group">
-                        <input 
-                          type="text" 
-                          placeholder="Paste Device UUID to link..." 
-                          value={deviceInputs[homeId] || ''} 
-                          onChange={(e) => handleDeviceInputChange(homeId, e.target.value)} 
-                        />
-                        <button onClick={() => handleClaimDevice(homeId)} disabled={loading} style={{ background: '#00ffa3', color: '#000' }}>Link Device</button>
+                    {/* Right Column: Devices */}
+                    <div className="column">
+                      <h4>Linked Devices</h4>
+                      <div className="member-list">
+                        {homeDevices.map(device => (
+                          <div key={device.id} className="member-item">
+                            <div className="setting-info">
+                              <span className="label" style={{ color: '#00ffa3' }}>{device.device_name || "Smart Node"}</span>
+                              <span className="desc" style={{ fontSize: '0.7rem' }}>{device.id.slice(0, 13)}...</span>
+                            </div>
+                          </div>
+                        ))}
+                        {homeDevices.length === 0 && <p className="desc" style={{ fontStyle: 'italic', padding: '10px' }}>No hardware linked.</p>}
+                      </div>
+
+                      <div className="invite-section">
+                        <div className="input-group">
+                          <input 
+                            type="text" 
+                            placeholder="Device UUID to link..." 
+                            value={deviceInputs[homeId] || ''} 
+                            onChange={(e) => handleDeviceInputChange(homeId, e.target.value)} 
+                          />
+                          <button onClick={() => handleClaimDevice(homeId)} disabled={loading} style={{ background: '#00ffa3', color: '#000' }}>Link</button>
+                        </div>
                       </div>
                     </div>
+
                   </div>
                 )}
                 
@@ -342,18 +375,18 @@ export default function SettingPage({ onNavigate }) {
         })}
 
         <section className="settings-card">
-           <div className="card-header"><span className="icon">➕</span><h3>Create New Home</h3></div>
-           <div className="setup-home">
-             <div className="input-group">
-               <input 
-                 type="text" 
-                 placeholder="New Home Name" 
-                 value={newHomeName} 
-                 onChange={(e) => setNewHomeName(e.target.value)} 
-               />
-               <button onClick={handleCreateHome} disabled={loading}>Create</button>
-             </div>
-           </div>
+            <div className="card-header"><span className="icon">➕</span><h3>Create New Home</h3></div>
+            <div className="setup-home">
+              <div className="input-group">
+                <input 
+                  type="text" 
+                  placeholder="New Home Name" 
+                  value={newHomeName} 
+                  onChange={(e) => setNewHomeName(e.target.value)} 
+                />
+                <button onClick={handleCreateHome} disabled={loading}>Create</button>
+              </div>
+            </div>
         </section>
 
         <section className="settings-card">
@@ -400,7 +433,7 @@ export default function SettingPage({ onNavigate }) {
         .status-tag.pending { color: #ffab00; }
         .status-tag.active { color: #00ffa3; }
         .member-list { margin: 15px 0; display: flex; flex-direction: column; gap: 8px; }
-        .member-item { display: flex; justify-content: space-between; align-items: center; background: #0a0a0a; padding: 12px; border-radius: 12px; border: 1px solid #111; }
+        .member-item { display: flex; justify-content: space-between; align-items: center; background: #0a0a0a; padding: 12px; border-radius: 12px; border: 1px solid #111; min-height: 56px; }
         .input-group { display: flex; gap: 10px; margin-top: 15px; }
         input { flex: 1; background: #111; border: 1px solid #222; border-radius: 12px; padding: 12px; color: white; outline: none; }
         button { background: #00d4ff; color: black; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
@@ -421,6 +454,10 @@ export default function SettingPage({ onNavigate }) {
         .action-footer { margin-top: 40px; text-align: center; }
         .btn-logout { background: transparent; color: #ff4d4d; border: 1px solid #ff4d4d44; padding: 10px 20px; border-radius: 12px; cursor: pointer; }
         .version { font-size: 0.75rem; color: #444; margin-top: 15px; }
+        
+        @media (max-width: 900px) {
+          .owner-controls-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
     </div>
   );

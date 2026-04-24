@@ -6,6 +6,11 @@ export default function SettingPage({ onNavigate }) {
   const [irEnabled, setIrEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
   
+  // Current User State
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
+
   // Multi-home states
   const [userHomes, setUserHomes] = useState([]); 
   const [membersByHome, setMembersByHome] = useState({}); 
@@ -31,6 +36,16 @@ export default function SettingPage({ onNavigate }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Set Current User Profile Data
+      const displayName = user.user_metadata?.display_name || user.user_metadata?.full_name || 'Not set';
+      setCurrentUser({
+        id: user.id,
+        email: user.email,
+        name: displayName,
+        createdAt: user.created_at
+      });
+      setNewName(displayName);
+
       const { data: homeMemberships } = await supabase
         .from('home_members')
         .select('id, role, status, homes(id, name)')
@@ -50,7 +65,7 @@ export default function SettingPage({ onNavigate }) {
 
         homeMemberships.forEach(membership => {
           fetchHomeMembers(membership.homes.id);
-          fetchHomeDevices(membership.homes.id); // Check for matching home_id in devices
+          fetchHomeDevices(membership.homes.id); 
         });
       } else {
         setUserHomes([]);
@@ -70,6 +85,25 @@ export default function SettingPage({ onNavigate }) {
     }
   }
 
+  async function handleUpdateDisplayName() {
+    if (!newName.trim()) return alert("Name cannot be empty.");
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { display_name: newName }
+      });
+      if (error) throw error;
+      
+      setCurrentUser(prev => ({ ...prev, name: newName }));
+      setIsEditingName(false);
+      alert("Display name updated!");
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function fetchHomeMembers(homeId) {
     const { data, error } = await supabase
       .from('home_members')
@@ -81,7 +115,6 @@ export default function SettingPage({ onNavigate }) {
     }
   }
 
-  // Matches home_id in authorized_devices with the current home
   async function fetchHomeDevices(homeId) {
     const { data, error } = await supabase
       .from('authorized_devices')
@@ -188,7 +221,7 @@ export default function SettingPage({ onNavigate }) {
         alert("Device ID not found in system. Please ensure the UUID is correct.");
       } else {
         setDeviceInputs(prev => ({ ...prev, [homeId]: '' }));
-        fetchHomeDevices(homeId); // Refresh device list for this home
+        fetchHomeDevices(homeId); 
         alert("Device successfully linked to this home!");
       }
     } catch (err) {
@@ -233,6 +266,52 @@ export default function SettingPage({ onNavigate }) {
           <h1>System Settings</h1>
           <p>Manage your properties, hardware, and access controls.</p>
         </header>
+
+        {/* --- USER PROFILE SECTION --- */}
+        {currentUser && (
+          <section className="settings-card profile-card">
+            <div className="card-header" style={{ justifyContent: 'space-between', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span className="icon">👤</span>
+                <h3>My Profile</h3>
+              </div>
+            </div>
+            <div className="profile-grid">
+              <div className="profile-item">
+                <span className="desc">Display Name</span>
+                {isEditingName ? (
+                  <div className="input-group" style={{ marginTop: '5px' }}>
+                    <input 
+                      type="text" 
+                      value={newName} 
+                      onChange={(e) => setNewName(e.target.value)} 
+                      style={{ padding: '8px' }}
+                    />
+                    <button onClick={handleUpdateDisplayName} disabled={loading}>Save</button>
+                    <button className="btn-cancel" onClick={() => { setIsEditingName(false); setNewName(currentUser.name); }}>Cancel</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span className="label">{currentUser.name}</span>
+                    <button className="btn-text" onClick={() => setIsEditingName(true)} style={{ padding: 0 }}>Edit</button>
+                  </div>
+                )}
+              </div>
+              <div className="profile-item">
+                <span className="desc">Email Address</span>
+                <span className="label email-display">{currentUser.email}</span>
+              </div>
+              <div className="profile-item">
+                <span className="desc">User ID</span>
+                <span className="label" style={{fontFamily: 'monospace', fontSize: '0.8rem'}}>{currentUser.id}</span>
+              </div>
+              <div className="profile-item">
+                <span className="desc">Account Created</span>
+                <span className="label">{new Date(currentUser.createdAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </section>
+        )}
 
         {pendingInvites.length > 0 && (
           <section className="settings-card alert-card">
@@ -302,7 +381,6 @@ export default function SettingPage({ onNavigate }) {
               <div className="home-details">
                 <div className="owner-controls-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px', marginTop: '10px' }}>
                   
-                  {/* Left Column: Members - Visible to everyone */}
                   <div className="column">
                     <h4>Access Members</h4>
                     <div className="member-list">
@@ -312,7 +390,6 @@ export default function SettingPage({ onNavigate }) {
                             <span className="label email-display">{`User: ${m.user_id.slice(0, 8)}...`}</span>
                             <span className={`status-tag ${m.status}`}>{m.status}</span>
                           </div>
-                          {/* Only show remove button to Owners */}
                           {isOwner && m.role !== 'owner' && (
                             <button className="btn-remove" onClick={() => handleRemoveMember(m.id, homeId)}>Remove</button>
                           )}
@@ -320,7 +397,6 @@ export default function SettingPage({ onNavigate }) {
                       ))}
                     </div>
 
-                    {/* Only show invite section to Owners */}
                     {isOwner && (
                       <div className="invite-section">
                         <div className="input-group">
@@ -336,7 +412,6 @@ export default function SettingPage({ onNavigate }) {
                     )}
                   </div>
 
-                  {/* Right Column: Devices - Visible to everyone */}
                   <div className="column">
                     <h4>Linked Devices</h4>
                     <div className="member-list">
@@ -351,7 +426,6 @@ export default function SettingPage({ onNavigate }) {
                       {homeDevices.length === 0 && <p className="desc" style={{ fontStyle: 'italic', padding: '10px' }}>No hardware linked.</p>}
                     </div>
 
-                    {/* Only show link section to Owners */}
                     {isOwner && (
                       <div className="invite-section">
                         <div className="input-group">
@@ -423,6 +497,9 @@ export default function SettingPage({ onNavigate }) {
         .page-title h1 { font-size: 2rem; font-weight: 800; margin: 0; }
         .page-title p { color: #64748b; margin-top: 5px; margin-bottom: 30px; }
         .settings-card { background: rgba(15, 15, 15, 0.6); border: 1px solid #1f1f1f; border-radius: 20px; padding: 25px; margin-bottom: 20px; transition: 0.3s; }
+        .profile-card { border-left: 4px solid #00d4ff; }
+        .profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .profile-item { display: flex; flex-direction: column; gap: 4px; }
         .active-home-card { border-color: #00d4ff88; box-shadow: 0 0 15px #00d4ff11; }
         .alert-card { border: 1px solid #00d4ff44; background: linear-gradient(145deg, #00d4ff0a, #000); }
         .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid #1f1f1f; padding-bottom: 15px; }

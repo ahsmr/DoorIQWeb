@@ -14,7 +14,7 @@ export default function SettingPage({ onNavigate }) {
   // Multi-home states
   const [userHomes, setUserHomes] = useState([]); 
   const [membersByHome, setMembersByHome] = useState({}); 
-  const [devicesByHome, setDevicesByHome] = useState({}); // Track devices per home
+  const [devicesByHome, setDevicesByHome] = useState({}); 
   const [pendingInvites, setPendingInvites] = useState([]); 
   
   // App Context State
@@ -33,10 +33,11 @@ export default function SettingPage({ onNavigate }) {
 
   async function fetchInitialData() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      setLoading(true);
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) return;
 
-      // Set Current User Profile Data
       const displayName = user.user_metadata?.display_name || user.user_metadata?.full_name || 'Not set';
       setCurrentUser({
         id: user.id,
@@ -46,11 +47,13 @@ export default function SettingPage({ onNavigate }) {
       });
       setNewName(displayName);
 
-      const { data: homeMemberships } = await supabase
+      const { data: homeMemberships, error: memberError } = await supabase
         .from('home_members')
         .select('id, role, status, homes(id, name)')
         .eq('user_id', user.id)
         .eq('status', 'active');
+
+      if (memberError) throw memberError;
 
       if (homeMemberships && homeMemberships.length > 0) {
         setUserHomes(homeMemberships);
@@ -82,6 +85,8 @@ export default function SettingPage({ onNavigate }) {
       setPendingInvites(invites || []);
     } catch (err) {
       console.error("Error loading settings data:", err);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -93,7 +98,6 @@ export default function SettingPage({ onNavigate }) {
         data: { display_name: newName }
       });
       if (error) throw error;
-      
       setCurrentUser(prev => ({ ...prev, name: newName }));
       setIsEditingName(false);
       alert("Display name updated!");
@@ -105,14 +109,36 @@ export default function SettingPage({ onNavigate }) {
   }
 
   async function fetchHomeMembers(homeId) {
-    const { data, error } = await supabase
+    // 1. Get the member records for this home
+    const { data: members, error: memberError } = await supabase
       .from('home_members')
       .select(`id, user_id, role, status`) 
       .eq('home_id', homeId);
     
-    if (!error) {
-      setMembersByHome(prev => ({ ...prev, [homeId]: data || [] }));
+    if (memberError) {
+      console.error(`Error fetching members for home ${homeId}:`, memberError);
+      return;
     }
+
+    // 2. Fetch all profiles that match the user_ids in this home
+    const userIds = members.map(m => m.user_id);
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('id', userIds);
+
+    if (profileError) {
+      console.error("Error fetching profiles:", profileError);
+      return;
+    }
+
+    // 3. Merge profile data into the member objects
+    const enrichedMembers = members.map(member => ({
+      ...member,
+      profiles: profiles.find(p => p.id === member.user_id)
+    }));
+
+    setMembersByHome(prev => ({ ...prev, [homeId]: enrichedMembers || [] }));
   }
 
   async function fetchHomeDevices(homeId) {
@@ -207,22 +233,19 @@ export default function SettingPage({ onNavigate }) {
     const hardwareId = deviceInputs[homeId];
     if (!hardwareId) return alert("Provide a Device ID.");
     setLoading(true);
-
     try {
       const { data, error } = await supabase
         .from('authorized_devices')
         .update({ home_id: homeId })
         .eq('id', hardwareId.trim()) 
         .select();
-
       if (error) throw error;
-
       if (!data || data.length === 0) {
-        alert("Device ID not found in system. Please ensure the UUID is correct.");
+        alert("Device ID not found.");
       } else {
         setDeviceInputs(prev => ({ ...prev, [homeId]: '' }));
         fetchHomeDevices(homeId); 
-        alert("Device successfully linked to this home!");
+        alert("Device linked!");
       }
     } catch (err) {
       alert(err.message);
@@ -240,6 +263,7 @@ export default function SettingPage({ onNavigate }) {
   const handleSignOut = async () => {
     localStorage.removeItem('activeDoorIQHome');
     await supabase.auth.signOut();
+    window.location.reload(); 
   };
 
   const handleInviteInputChange = (homeId, value) => {
@@ -258,11 +282,11 @@ export default function SettingPage({ onNavigate }) {
 
       <nav className="settings-nav">
         <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <img src="/logo.png" alt="DoorIQ Icon" style={{ height: '32px', width: 'auto' }} />
-        <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
-          Door<span style={{ color: '#00d2ff' }}>IQ</span>
+          <img src="/logo.png" alt="DoorIQ Icon" style={{ height: '32px', width: 'auto' }} />
+          <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
+            Door<span style={{ color: '#00d2ff' }}>IQ</span>
+          </div>
         </div>
-      </div>
         <button onClick={onNavigate} className="back-link">✕ Close</button>
       </nav>
 
@@ -271,7 +295,7 @@ export default function SettingPage({ onNavigate }) {
           <h1>System Settings</h1>
           <p>Manage your properties, hardware, and access controls.</p>
         </header>
-
+        
         {/* --- USER PROFILE SECTION --- */}
         {currentUser && (
           <section className="settings-card profile-card">
@@ -385,15 +409,21 @@ export default function SettingPage({ onNavigate }) {
 
               <div className="home-details">
                 <div className="owner-controls-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px', marginTop: '10px' }}>
-                  
                   <div className="column">
                     <h4>Access Members</h4>
                     <div className="member-list">
                       {homeMembers.map(m => (
                         <div key={m.id} className="member-item">
                           <div className="setting-info">
-                            <span className="label email-display">{`User: ${m.user_id.slice(0, 8)}...`}</span>
-                            <span className={`status-tag ${m.status}`}>{m.status}</span>
+                            <span className="label" style={{ color: '#fff' }}>
+                              {m.profiles?.display_name || 'Pending User'}
+                            </span>
+                            <span className="desc" style={{ fontSize: '0.7rem', fontFamily: 'monospace' }}>
+                              ID: {m.user_id.slice(0, 8)}...
+                            </span>
+                            <span className={`status-tag ${m.status}`} style={{ fontSize: '0.6rem' }}>
+                              {m.status}
+                            </span>
                           </div>
                           {isOwner && m.role !== 'owner' && (
                             <button className="btn-remove" onClick={() => handleRemoveMember(m.id, homeId)}>Remove</button>
@@ -428,9 +458,7 @@ export default function SettingPage({ onNavigate }) {
                           </div>
                         </div>
                       ))}
-                      {homeDevices.length === 0 && <p className="desc" style={{ fontStyle: 'italic', padding: '10px' }}>No hardware linked.</p>}
-                    </div>
-
+                    {homeDevices.length === 0 && <p className="desc" style={{ fontStyle: 'italic', padding: '10px' }}>No hardware linked.</p>}                    </div>
                     {isOwner && (
                       <div className="invite-section">
                         <div className="input-group">
@@ -445,14 +473,13 @@ export default function SettingPage({ onNavigate }) {
                       </div>
                     )}
                   </div>
-
-                </div>
-                
-                {!isOwner && (
+                  {!isOwner && (
                   <p className="desc" style={{ marginTop: '20px', textAlign: 'center', borderTop: '1px solid #1f1f1f', paddingTop: '10px' }}>
                     You are a member of this home. Contact the owner to manage settings.
                   </p>
                 )}
+                </div>
+                
               </div>
             </section>
           );

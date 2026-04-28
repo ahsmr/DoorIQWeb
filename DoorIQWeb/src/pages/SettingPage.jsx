@@ -34,18 +34,15 @@ export default function SettingPage({ onNavigate }) {
   }, []);
 
   // --- HELPER: SEND COMMAND TO SUPABASE ---
-  const sendCommand = async (type, value) => {
+  const sendCommand = async (type, text) => {
     if (!activeHomeId) return;
+    const payloadValue = text ? { text: text } : {};
     try {
       await supabase.from('commands').insert([
         { 
           home_id: activeHomeId, 
           type: type, 
-          payload: { 
-            value: value, 
-            timestamp: new Date().toISOString(),
-            triggered_by: currentUser?.id 
-          } 
+          payload: payloadValue
         }
       ]);
     } catch (err) {
@@ -57,9 +54,9 @@ export default function SettingPage({ onNavigate }) {
   const handleIrToggle = async (newValue) => {
     setIrEnabled(newValue);
     if (newValue === true) {
-      await sendCommand('IR_MODE_ON', 'Infrared mode manually enabled');
+      await sendCommand('IR_MODE_ON', null);
     } else {
-      await sendCommand('IR_MODE_OFF', 'Infrared mode manually disabled');
+      await sendCommand('IR_MODE_OFF', null);
     }
   };
 
@@ -70,9 +67,9 @@ export default function SettingPage({ onNavigate }) {
     if (isNowStandard) {
       setIrEnabled(true); // Automatically turn IR on if it's the standard
       setShowManualToggle(false); // Hide the toggle if it was open
-      await sendCommand('IR_STANDARD_SET_ON', 'User set IR as standard (Auto ON)');
+      await sendCommand('IR_STANDARD_SET_ON', null);
     } else {
-      await sendCommand('IR_STANDARD_SET_OFF', 'User disabled IR as standard');
+      await sendCommand('IR_STANDARD_SET_OFF', null);
     }
   };
 
@@ -252,7 +249,7 @@ export default function SettingPage({ onNavigate }) {
         .eq('home_id', homeId);
 
       if (unlinkError) throw unlinkError;
-      
+
       // 2. Now delete the home
       const { error: deleteError } = await supabase
         .from('homes')

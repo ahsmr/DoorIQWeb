@@ -194,13 +194,36 @@ export default function SettingPage({ onNavigate }) {
     setLoading(false);
   };
 
-  const handleDeleteHome = async (homeId) => {
-    if (!window.confirm("Are you sure?")) return;
+const handleDeleteHome = async (homeId) => {
+    if (!window.confirm("Are you sure? This will delete the home and unlink all devices.")) return;
     setLoading(true);
-    const { error } = await supabase.from('homes').delete().eq('id', homeId);
-    if (error) alert(error.message);
-    else fetchInitialData();
-    setLoading(false);
+    try {
+      // 1. Unlink all devices associated with this home first
+      // This sets their home_id to null so they aren't deleted by CASCADE 
+      // and can be claimed by others later.
+      const { error: unlinkError } = await supabase
+        .from('authorized_devices')
+        .update({ home_id: null })
+        .eq('home_id', homeId);
+
+      if (unlinkError) throw unlinkError;
+
+      // 2. Now delete the home
+      const { error: deleteError } = await supabase
+        .from('homes')
+        .delete()
+        .eq('id', homeId);
+
+      if (deleteError) throw deleteError;
+
+      alert("Home deleted and devices unlinked successfully.");
+      fetchInitialData();
+    } catch (err) {
+      console.error("Error during home deletion:", err);
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAcceptInvite = async (membershipId) => {
@@ -251,7 +274,6 @@ export default function SettingPage({ onNavigate }) {
     }
   };
 
-  // --- NEW: UNLINK DEVICE FUNCTION ---
   const handleUnlinkDevice = async (deviceId, homeId) => {
     if (!window.confirm("Are you sure you want to unlink this device?")) return;
     setLoading(true);

@@ -32,7 +32,12 @@ export default function RegisterPage({ onNavigateToLogin, onBackToLanding }) {
 
       {/* Brand Logo / Back to Landing Button */}
       <button className="vita-logo-btn" onClick={onBackToLanding}>
-        Door<span>IQ</span>
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <img src="/logo.png" alt="DoorIQ Icon" style={{ height: '32px', width: 'auto' }} />
+        <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
+          Door<span style={{ color: '#00d2ff' }}>IQ</span>
+        </div>
+      </div>
       </button>
 
       <div className="glass-card">

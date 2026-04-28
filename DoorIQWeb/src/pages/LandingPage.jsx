@@ -14,7 +14,12 @@ const LandingPage = ({ onGetStarted, onLogin }) => {
 
       {/* Navigation */}
       <nav className="glass-nav">
-        <div className="logo">Door<span>IQ</span></div>
+      <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <img src="/logo.png" alt="DoorIQ Icon" style={{ height: '32px', width: 'auto' }} />
+        <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
+          Door<span style={{ color: '#00d2ff' }}>IQ</span>
+        </div>
+      </div>
         <div className="nav-links">
           <a href="#tech">Technology</a>
           <a href="#features">Features</a>

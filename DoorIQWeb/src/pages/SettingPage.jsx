@@ -109,7 +109,6 @@ export default function SettingPage({ onNavigate }) {
   }
 
   async function fetchHomeMembers(homeId) {
-    // 1. Get the member records for this home
     const { data: members, error: memberError } = await supabase
       .from('home_members')
       .select(`id, user_id, role, status`) 
@@ -120,7 +119,6 @@ export default function SettingPage({ onNavigate }) {
       return;
     }
 
-    // 2. Fetch all profiles that match the user_ids in this home
     const userIds = members.map(m => m.user_id);
     const { data: profiles, error: profileError } = await supabase
       .from('profiles')
@@ -132,7 +130,6 @@ export default function SettingPage({ onNavigate }) {
       return;
     }
 
-    // 3. Merge profile data into the member objects
     const enrichedMembers = members.map(member => ({
       ...member,
       profiles: profiles.find(p => p.id === member.user_id)
@@ -254,6 +251,27 @@ export default function SettingPage({ onNavigate }) {
     }
   };
 
+  // --- NEW: UNLINK DEVICE FUNCTION ---
+  const handleUnlinkDevice = async (deviceId, homeId) => {
+    if (!window.confirm("Are you sure you want to unlink this device?")) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('authorized_devices')
+        .update({ home_id: null })
+        .eq('id', deviceId);
+      
+      if (error) throw error;
+      
+      fetchHomeDevices(homeId);
+      alert("Device unlinked successfully.");
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRemoveMember = async (membershipId, homeId) => {
     if (!window.confirm("Revoke user access?")) return;
     await supabase.from('home_members').delete().eq('id', membershipId);
@@ -296,7 +314,6 @@ export default function SettingPage({ onNavigate }) {
           <p>Manage your properties, hardware, and access controls.</p>
         </header>
         
-        {/* --- USER PROFILE SECTION --- */}
         {currentUser && (
           <section className="settings-card profile-card">
             <div className="card-header" style={{ justifyContent: 'space-between', width: '100%' }}>
@@ -456,9 +473,20 @@ export default function SettingPage({ onNavigate }) {
                             <span className="label" style={{ color: '#00ffa3' }}>{device.device_name || "Smart Node"}</span>
                             <span className="desc" style={{ fontSize: '0.7rem' }}>{device.id.slice(0, 13)}...</span>
                           </div>
+                          {/* ONLY OWNER CAN UNLINK */}
+                          {isOwner && (
+                            <button 
+                                className="btn-remove" 
+                                style={{fontSize: '0.6rem', padding: '4px 8px'}} 
+                                onClick={() => handleUnlinkDevice(device.id, homeId)}
+                            >
+                                Unlink
+                            </button>
+                          )}
                         </div>
                       ))}
-                    {homeDevices.length === 0 && <p className="desc" style={{ fontStyle: 'italic', padding: '10px' }}>No hardware linked.</p>}                    </div>
+                      {homeDevices.length === 0 && <p className="desc" style={{ fontStyle: 'italic', padding: '10px' }}>No hardware linked.</p>}
+                    </div>
                     {isOwner && (
                       <div className="invite-section">
                         <div className="input-group">

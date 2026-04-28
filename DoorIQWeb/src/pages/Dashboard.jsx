@@ -497,7 +497,12 @@ export default function Dashboard({ onNavigate }) {
       `}</style>
 
       <nav className="dash-nav">
-        <div className="logo">Door<span>IQ</span></div>
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <img src="/logo.png" alt="DoorIQ Icon" style={{ height: '32px', width: 'auto' }} />
+        <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
+          Door<span style={{ color: '#00d2ff' }}>IQ</span>
+        </div>
+      </div>
         
         {/* NEW: Dropdown to select the active home */}
         {availableHomes.length > 0 && (

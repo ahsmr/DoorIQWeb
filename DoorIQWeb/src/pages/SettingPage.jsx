@@ -4,6 +4,8 @@ import { supabase } from '../supabaseClient.js';
 export default function SettingPage({ onNavigate }) {
   // --- 1. STATE CONFIGURATION ---
   const [irEnabled, setIrEnabled] = useState(true);
+  const [irStandardMode, setIrStandardMode] = useState(false); // Track if IR is set as standard
+  const [showManualToggle, setShowManualToggle] = useState(false); // Track if manual override button was pressed
   const [loading, setLoading] = useState(false);
   
   // Current User State
@@ -30,6 +32,49 @@ export default function SettingPage({ onNavigate }) {
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  // --- HELPER: SEND COMMAND TO SUPABASE ---
+  const sendCommand = async (type, value) => {
+    if (!activeHomeId) return;
+    try {
+      await supabase.from('commands').insert([
+        { 
+          home_id: activeHomeId, 
+          type: type, 
+          payload: { 
+            value: value, 
+            timestamp: new Date().toISOString(),
+            triggered_by: currentUser?.id 
+          } 
+        }
+      ]);
+    } catch (err) {
+      console.error("Error sending command to Supabase:", err);
+    }
+  };
+
+  // --- IR LOGIC HANDLERS ---
+  const handleIrToggle = async (newValue) => {
+    setIrEnabled(newValue);
+    if (newValue === true) {
+      await sendCommand('IR_MODE_ON', 'Infrared mode manually enabled');
+    } else {
+      await sendCommand('IR_MODE_OFF', 'Infrared mode manually disabled');
+    }
+  };
+
+  const handleStandardToggle = async () => {
+    const isNowStandard = !irStandardMode;
+    setIrStandardMode(isNowStandard);
+    
+    if (isNowStandard) {
+      setIrEnabled(true); // Automatically turn IR on if it's the standard
+      setShowManualToggle(false); // Hide the toggle if it was open
+      await sendCommand('IR_STANDARD_SET_ON', 'User set IR as standard (Auto ON)');
+    } else {
+      await sendCommand('IR_STANDARD_SET_OFF', 'User disabled IR as standard');
+    }
+  };
 
   async function fetchInitialData() {
     try {
@@ -194,7 +239,7 @@ export default function SettingPage({ onNavigate }) {
     setLoading(false);
   };
 
-const handleDeleteHome = async (homeId) => {
+  const handleDeleteHome = async (homeId) => {
     if (!window.confirm("Are you sure? This will delete the home and unlink all devices.")) return;
     setLoading(true);
     try {
@@ -207,7 +252,7 @@ const handleDeleteHome = async (homeId) => {
         .eq('home_id', homeId);
 
       if (unlinkError) throw unlinkError;
-
+      
       // 2. Now delete the home
       const { error: deleteError } = await supabase
         .from('homes')
@@ -529,7 +574,6 @@ const handleDeleteHome = async (homeId) => {
                   </p>
                 )}
                 </div>
-                
               </div>
             </section>
           );
@@ -552,16 +596,58 @@ const handleDeleteHome = async (homeId) => {
 
         <section className="settings-card">
           <div className="card-header"><span className="icon">📟</span><h3>Hardware Settings (Active Home)</h3></div>
-          <div className="setting-row" style={{ borderBottom: 'none' }}>
+          
+          {/* IR Standard Setting */}
+          <div className="setting-row">
             <div className="setting-info">
-              <span className="label">Infrared (IR) Mode</span>
-              <span className="desc">Toggle for camera nodes.</span>
+              <span className="label">IR as Standard</span>
+              <span className="desc">Lock IR mode to ON (cannot be manually changed unless override is used).</span>
             </div>
             <label className="switch">
-              <input type="checkbox" checked={irEnabled} onChange={() => setIrEnabled(!irEnabled)} />
+              <input 
+                type="checkbox" 
+                checked={irStandardMode} 
+                onChange={handleStandardToggle} 
+              />
               <span className="slider round"></span>
             </label>
           </div>
+
+          {/* Manual Button (appears if standard is ON) */}
+          {irStandardMode && (
+            <div className="setting-row" style={{ borderBottom: showManualToggle ? '1px solid #1f1f1f' : 'none' }}>
+              <div className="setting-info">
+                <span className="label">Manual Control</span>
+                <span className="desc">Override standard settings to show toggle.</span>
+              </div>
+              <button 
+                className="btn-switch" 
+                onClick={() => setShowManualToggle(!showManualToggle)}
+                style={{ fontSize: '0.7rem' }}
+              >
+                {showManualToggle ? "Hide Override" : "Manual Override"}
+              </button>
+            </div>
+          )}
+
+          {/* IR Toggle Button (Visible if Standard is OFF or Manual Override is ON) */}
+          {(!irStandardMode || showManualToggle) && (
+            <div className="setting-row" style={{ borderBottom: 'none' }}>
+              <div className="setting-info">
+                <span className="label">Infrared (IR) Mode</span>
+                <span className="desc">Toggle for camera nodes.</span>
+              </div>
+              <label className="switch">
+                <input 
+                  type="checkbox" 
+                  checked={irEnabled} 
+                  disabled={irStandardMode && !showManualToggle} // Hard lock if standard
+                  onChange={(e) => handleIrToggle(e.target.checked)} 
+                />
+                <span className="slider round"></span>
+              </label>
+            </div>
+          )}
         </section>
 
         <div className="action-footer">

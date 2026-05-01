@@ -240,44 +240,39 @@ const LandingPage = ({ onGetStarted, onLogin }) => {
         .disclaimer { max-width: 800px; margin: 20px auto 0; }
         .not-affiliated { color: #444; font-size: 0.75rem; }
 
-        /* MOBILE FIXES */
+/* MOBILE FIXES */
         @media (max-width: 800px) {
+          /* Navbar fixes from before */
           .glass-nav { 
             padding: 1rem 5%; 
-            flex-wrap: nowrap; /* Keeps everything on one line */
             gap: 10px;
           }
+          .nav-links { display: none; }
+          .auth-buttons { gap: 8px; }
+          .btn-login-link { font-size: 0.85rem; padding: 8px; margin: 0; }
+          .btn-get-started { padding: 8px 16px; font-size: 0.85rem; }
 
-          .nav-links { 
-            display: none; /* Hide middle links to save horizontal space */
+          /* Bento Grid Fixes */
+          .bento-container { 
+            grid-template-columns: 1fr !important; /* Force single column */
+            gap: 16px; 
+          }
+          
+          .bento-card {
+            grid-column: span 1 !important; /* Reset the 'wide' cards */
+            padding: 25px; /* Slightly less padding for small screens */
+            height: auto; /* Prevents vertical stretching */
           }
 
-          .auth-buttons {
-            display: flex;
-            align-items: center;
-            gap: 8px; /* Tighter gap for mobile */
+          .wide { 
+            grid-column: span 1 !important; 
           }
 
-          .btn-login-link { 
-            margin-right: 0; 
-            font-size: 0.85rem; /* Slightly smaller text */
-            padding: 8px;
-          }
-
-          .btn-get-started {
-            padding: 8px 16px; /* Smaller footprint */
-            font-size: 0.85rem;
-          }
-
-          .logo {
-            transform: scale(0.9); /* Shrink logo slightly */
-            transform-origin: left;
-          }
-
+          /* General Layout cleanup */
           .hero h1 { font-size: 2.2rem; }
-          .hero-actions { flex-direction: column; gap: 12px; }
-          .bento-container { grid-template-columns: 1fr; }
-          .feature-row, .feature-row.reverse { flex-direction: column; text-align: center; }
+          .section-container { padding: 40px 5%; }
+          .section-header h2 { font-size: 2rem; }
+          .feature-row, .feature-row.reverse { flex-direction: column; text-align: center; gap: 30px; }
         }
       `}</style>
     </div>

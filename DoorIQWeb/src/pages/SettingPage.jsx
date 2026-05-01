@@ -701,11 +701,12 @@ export default function SettingPage({ onNavigate }) {
         .action-footer { margin-top: 40px; text-align: center; }
         .btn-logout { background: transparent; color: #ff4d4d; border: 1px solid #ff4d4d44; padding: 10px 20px; border-radius: 12px; cursor: pointer; }
         .version { font-size: 0.75rem; color: #444; margin-top: 15px; }
-        
+        .card-header div[style*="display: flex"] {flex-wrap: wrap;gap: 10px;}
         @media (max-width: 900px) {
-          .owner-controls-grid { grid-template-columns: 1fr !important; }
-          .card-header { flex-direction: column; align-items: flex-start; }
-          .owner-actions-container { width: 100%; justify-content: space-between; margin-top: 10px; flex-wrap: wrap; }
+        .owner-controls-grid { grid-template-columns: 1fr !important; }
+        /* Allow the header to grow and wrap items when the input is visible */
+        .card-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+        .owner-actions-container { width: 100%; justify-content: flex-start; gap: 10px;}
         }
       `}
       </style>

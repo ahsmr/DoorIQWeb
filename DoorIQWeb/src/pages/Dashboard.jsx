@@ -494,7 +494,7 @@ export default function Dashboard({ onNavigate }) {
         .btn-accept { background: #00d4ff; color: black; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 800; cursor: pointer; }
 
         @media (max-width: 900px) { .main-content { grid-template-columns: 1fr; } .invite-notification { grid-column: span 1; } }
-        //Bug with the hold of buttons for the phone 
+        
         .mic-btn, 
         .btn-supabase-record {
             /* Prevents text selection */
@@ -580,6 +580,7 @@ export default function Dashboard({ onNavigate }) {
                           onMouseLeave={() => toggleMic(false)}
                           onTouchStart={(e) => handleStart(e, 'mic')}
                           onTouchEnd={() => toggleMic(false)}
+                          onContextMenu={(e) => e.preventDefault()}
                           className="mic-btn"
                         >🎤</button>
                       </div>
@@ -688,6 +689,7 @@ export default function Dashboard({ onNavigate }) {
                 onMouseLeave={stopSupabaseRecording}
                 onTouchStart={(e) => handleStart(e, 'record_supabase')}
                 onTouchEnd={stopSupabaseRecording}
+                onContextMenu={(e) => e.preventDefault()}
               >
                 {isRecordingNote ? "🔴 SENDING VOICE..." : "🎙️ HOLD TO RECORD VOICE"}
               </button>

@@ -240,11 +240,44 @@ const LandingPage = ({ onGetStarted, onLogin }) => {
         .disclaimer { max-width: 800px; margin: 20px auto 0; }
         .not-affiliated { color: #444; font-size: 0.75rem; }
 
+        /* MOBILE FIXES */
         @media (max-width: 800px) {
+          .glass-nav { 
+            padding: 1rem 5%; 
+            flex-wrap: nowrap; /* Keeps everything on one line */
+            gap: 10px;
+          }
+
+          .nav-links { 
+            display: none; /* Hide middle links to save horizontal space */
+          }
+
+          .auth-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px; /* Tighter gap for mobile */
+          }
+
+          .btn-login-link { 
+            margin-right: 0; 
+            font-size: 0.85rem; /* Slightly smaller text */
+            padding: 8px;
+          }
+
+          .btn-get-started {
+            padding: 8px 16px; /* Smaller footprint */
+            font-size: 0.85rem;
+          }
+
+          .logo {
+            transform: scale(0.9); /* Shrink logo slightly */
+            transform-origin: left;
+          }
+
+          .hero h1 { font-size: 2.2rem; }
+          .hero-actions { flex-direction: column; gap: 12px; }
           .bento-container { grid-template-columns: 1fr; }
-          .wide { grid-column: span 1; }
-          .feature-row, .feature-row.reverse { flex-direction: column; text-align: center; gap: 40px; }
-          .hero h1 { font-size: 2.5rem; }
+          .feature-row, .feature-row.reverse { flex-direction: column; text-align: center; }
         }
       `}</style>
     </div>

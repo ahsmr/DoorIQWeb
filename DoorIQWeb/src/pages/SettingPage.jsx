@@ -704,8 +704,11 @@ export default function SettingPage({ onNavigate }) {
         
         @media (max-width: 900px) {
           .owner-controls-grid { grid-template-columns: 1fr !important; }
+          .card-header { flex-direction: column; align-items: flex-start; }
+          .owner-actions-container { width: 100%; justify-content: space-between; margin-top: 10px; flex-wrap: wrap; }
         }
-      `}</style>
+      `}
+      </style>
     </div>
   );
 }

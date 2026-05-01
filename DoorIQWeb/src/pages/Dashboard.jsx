@@ -494,6 +494,24 @@ export default function Dashboard({ onNavigate }) {
         .btn-accept { background: #00d4ff; color: black; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 800; cursor: pointer; }
 
         @media (max-width: 900px) { .main-content { grid-template-columns: 1fr; } .invite-notification { grid-column: span 1; } }
+        //Bug with the hold of buttons for the phone 
+        .mic-btn, 
+        .btn-supabase-record {
+            /* Prevents text selection */
+            -webkit-user-select: none;  
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+
+            /* Prevents the "copy/paste" popup menu on iOS/Android */
+            -webkit-touch-callout: none; 
+
+            /* Disables the default blue highlight when tapping on mobile */
+            -webkit-tap-highlight-color: transparent; 
+            
+            /* Ensures the cursor doesn't change and stays responsive */
+            touch-action: none; 
+        }
       `}</style>
 
       <nav className="dash-nav">

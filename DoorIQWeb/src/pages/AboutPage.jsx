@@ -38,7 +38,7 @@ const AboutPage = ({ onBack }) => {
           {/* Unified Team Card */}
           <div className="bento-card team-card">
             <div className="icon">👥</div>
-            <h3>The Team</h3>
+            <h3>Team CW1B2</h3>
             <div className="team-list">
               {teamMembers.map((name, index) => (
                 <span key={index} className="team-name">{name}</span>
@@ -69,7 +69,7 @@ const AboutPage = ({ onBack }) => {
             <div className="hardware-display">
               {/* Replace these src paths with your actual 3D render screenshots */}
               <div className="render-box">
-                <img src="/path-to-render1.png" alt="3D Casing Front View" />
+                <img src="/Case.png" alt="3D Casing Front View" />
                 <span>3D Case Render</span>
               </div>
               <div className="render-box">

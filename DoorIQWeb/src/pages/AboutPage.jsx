@@ -73,7 +73,7 @@ const AboutPage = ({ onBack }) => {
                 <span>3D Case Render</span>
               </div>
               <div className="render-box">
-                <img src="/path-to-render2.png" alt="Exploded View" />
+                <img src="/Casing_exploded.png" alt="Exploded View" />
                 <span>Assembly View</span>
               </div>
             </div>

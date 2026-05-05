@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import SettingsPage from './pages/SettingPage'; 
+import AboutPage from './pages/AboutPage';
 import './index.css';
 
 export default function App() {
@@ -12,28 +13,43 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('home'); 
   const [authView, setAuthView] = useState('login'); 
   const [showLanding, setShowLanding] = useState(true);
+  const [showAbout, setShowAbout] = useState(false);
 //test 
   useEffect(() => {
     // Check session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       // If user is already logged in, skip the landing page entirely
-      if (session) setShowLanding(false);
+      if (session) {
+        setShowLanding(false);
+        setShowAbout(false);
+      }
     });
 
     // Sync auth changes (Login, Logout, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) setShowLanding(false);
+      if (session) {
+        setShowLanding(false);
+        setShowAbout(false);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   // 1. PUBLIC LANDING VIEW (The "About DoorIQ" introduction)
+  if (showAbout && !session) {
+    return <AboutPage onBack={() => { setShowAbout(false); setShowLanding(true); }} />;
+  }
+
   if (showLanding && !session) {
   return (
     <LandingPage 
+      onNavigateToAbout={() => {
+        setShowLanding(false);
+        setShowAbout(true);
+      }}
       onLogin={() => {
         setAuthView('login');
         setShowLanding(false);

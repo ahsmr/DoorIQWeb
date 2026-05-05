@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LandingPage = ({ onGetStarted, onLogin }) => {
+const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
   return (
     <div className="landing-wrapper">
       <style>
@@ -21,9 +21,22 @@ const LandingPage = ({ onGetStarted, onLogin }) => {
         </div>
       </div>
         <div className="nav-links">
-          <a href="#tech">Technology</a>
-          <a href="#features">Features</a>
-          <a href="#ecosystem">Ecosystem</a>
+          <a href="#tech" className="desktop-link">Technology</a>
+          <a href="#features" className="desktop-link">Features</a>
+          <a href="#ecosystem" className="desktop-link">Ecosystem</a>
+          <button 
+            onClick={onNavigateToAbout} 
+            className="about-nav-btn"
+            style={{ 
+              background: 'none', border: 'none', color: 'var(--text-dim)', 
+              cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', 
+              margin: '0 18px', padding: 0 
+            }}
+            onMouseOver={(e) => e.target.style.color = 'white'}
+            onMouseOut={(e) => e.target.style.color = 'var(--text-dim)'}
+          >
+            About Us
+          </button>
         </div>
         <div className="auth-buttons">
           {/* This button now specifically calls onLogin */}
@@ -242,26 +255,30 @@ const LandingPage = ({ onGetStarted, onLogin }) => {
 
 /* MOBILE FIXES */
         @media (max-width: 800px) {
-          /* Navbar fixes from before */
           .glass-nav { 
             padding: 1rem 5%; 
             gap: 10px;
           }
-          .nav-links { display: none; }
+          
+          /* Change: Keep the container, hide only the anchor links */
+          .nav-links .desktop-link { display: none; }
+          .nav-links { display: flex; }
+          .about-nav-btn { margin: 0 5px !important; font-size: 0.8rem !important; }
+
           .auth-buttons { gap: 8px; }
           .btn-login-link { font-size: 0.85rem; padding: 8px; margin: 0; }
           .btn-get-started { padding: 8px 16px; font-size: 0.85rem; }
 
           /* Bento Grid Fixes */
           .bento-container { 
-            grid-template-columns: 1fr !important; /* Force single column */
+            grid-template-columns: 1fr !important; 
             gap: 16px; 
           }
           
           .bento-card {
-            grid-column: span 1 !important; /* Reset the 'wide' cards */
-            padding: 25px; /* Slightly less padding for small screens */
-            height: auto; /* Prevents vertical stretching */
+            grid-column: span 1 !important; 
+            padding: 25px; 
+            height: auto; 
           }
 
           .wide { 

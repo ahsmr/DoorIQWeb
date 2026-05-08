@@ -33,6 +33,9 @@ export default function Dashboard({ onNavigate }) {
   const [audios, setAudios] = useState([]); 
   const [fetchingVideos, setFetchingVideos] = useState(false);
 
+  // --- NEW: Selection State for Deletion ---
+  const [selectedFiles, setSelectedFiles] = useState([]);
+
   const isProcessingAction = useRef(false); // Actions for the supabase
 
   useEffect(() => { // initialize the dashboard and fetch invites if there are any!!
@@ -310,6 +313,37 @@ export default function Dashboard({ onNavigate }) {
     }
   }
 
+  // --- NEW: Handle file deletion from Supabase ---
+  async function handleDeleteSelected() {
+    if (selectedFiles.length === 0) return;
+    const confirmDelete = window.confirm(`Permanently delete ${selectedFiles.length} file(s)?`);
+    if (!confirmDelete) return;
+
+    try {
+      const pathsToDelete = selectedFiles.map(name => `${homeId}/${name}`);
+      const { error } = await supabase.storage
+        .from('camera-video')
+        .remove(pathsToDelete);
+
+      if (error) throw error;
+
+      // Reset selection and refresh UI
+      setSelectedFiles([]);
+      fetchAllVideos();
+    } catch (err) {
+      console.error("Delete operation failed:", err);
+    }
+  }
+
+  // --- NEW: Toggle selection helper ---
+  const toggleSelection = (fileName) => {
+    setSelectedFiles(prev => 
+      prev.includes(fileName) 
+        ? prev.filter(f => f !== fileName) 
+        : [...prev, fileName]
+    );
+  };
+
   // --- Play audio instantly on Raspberry Pi ---
   const playAudioOnDevice = (fileName) => {
     const filePath = `${homeId}/${fileName}`;
@@ -470,6 +504,13 @@ export default function Dashboard({ onNavigate }) {
         .vid-info p { margin: 0; font-size: 0.7rem; font-weight: 600; }
         .vid-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; color: #00d4ff; z-index: 5;}
 
+        /* Selection Checkbox Style */
+        .selection-checkbox { position: absolute; top: 8px; right: 8px; z-index: 10; width: 18px; height: 18px; cursor: pointer; accent-color: #00d4ff; }
+
+        /* NEW: Delete Button Style */
+        .btn-delete-batch { background: #ff4d4d; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-delete-batch:hover { background: #ff3333; transform: scale(1.05); }
+
         /* Audio Action Buttons */
         .audio-action-btn { flex: 1; padding: 6px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer; transition: 0.2s; text-align: center; }
         .audio-action-btn.primary { background: #00d4ff; color: #000; border: none; }
@@ -600,15 +641,22 @@ export default function Dashboard({ onNavigate }) {
           <div className="video-vault">
             <div className="vault-header">
                <h3 style={{margin:0}}>📁 Captured Clips & Audios</h3>
-               <button 
-                 onClick={fetchAllVideos} 
-                 style={{ background: 'none', border: 'none', color: '#00d4ff', cursor: 'pointer', fontSize: '1.2rem', transition: 'transform 0.3s ease', display: 'flex', alignItems: 'center' }}
-                 onMouseEnter={(e) => e.currentTarget.style.transform = 'rotate(180deg)'}
-                 onMouseLeave={(e) => e.currentTarget.style.transform = 'rotate(0deg)'}
-                 title="Sync Storage"
-               >
-                 ↻
-               </button>            
+               <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+                 {selectedFiles.length > 0 && (
+                   <button className="btn-delete-batch" onClick={handleDeleteSelected}>
+                     Delete ({selectedFiles.length})
+                   </button>
+                 )}
+                 <button 
+                   onClick={fetchAllVideos} 
+                   style={{ background: 'none', border: 'none', color: '#00d4ff', cursor: 'pointer', fontSize: '1.2rem', transition: 'transform 0.3s ease', display: 'flex', alignItems: 'center' }}
+                   onMouseEnter={(e) => e.currentTarget.style.transform = 'rotate(180deg)'}
+                   onMouseLeave={(e) => e.currentTarget.style.transform = 'rotate(0deg)'}
+                   title="Sync Storage"
+                 >
+                   ↻
+                 </button>            
+               </div>
             </div>
             
             {fetchingVideos ? <p style={{color:'#444'}}>Scanning Vault...</p> : (
@@ -619,6 +667,13 @@ export default function Dashboard({ onNavigate }) {
                   {videos.length === 0 ? <p style={{color:'#444', fontSize:'0.8rem'}}>No video clips found.</p> :
                     videos.map((vid, i) => (
                       <div key={`vid-${i}`} className="video-item" onClick={() => window.open(vid.url, '_blank')}>
+                        <input 
+                          type="checkbox" 
+                          className="selection-checkbox" 
+                          checked={selectedFiles.includes(vid.name)}
+                          onChange={() => toggleSelection(vid.name)}
+                          onClick={(e) => e.stopPropagation()} 
+                        />
                         <span className="vid-badge">REC</span>
                         <video src={vid.url} preload="metadata" />
                         <div className="vid-info">
@@ -640,6 +695,12 @@ export default function Dashboard({ onNavigate }) {
                         className="video-item" 
                         style={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#111', padding: '15px', cursor: 'default'}}
                       >
+                        <input 
+                          type="checkbox" 
+                          className="selection-checkbox" 
+                          checked={selectedFiles.includes(aud.name)}
+                          onChange={() => toggleSelection(aud.name)}
+                        />
                         <span style={{fontSize: '2rem', marginBottom: '5px'}}>🔊</span>
                         <div className="vid-info" style={{textAlign: 'center', width: '100%', padding: '0', marginBottom: '15px'}}>
                           <p>{new Date(aud.created_at).toLocaleDateString()}</p>

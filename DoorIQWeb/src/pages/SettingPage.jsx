@@ -616,7 +616,7 @@ const handleSaveLocation = async (homeId) => {
                     )}
                     {isOwner && (
                           <div style={{ marginTop: '0px', marginBottom: '20px' }}>
-                            <h4>Location</h4>
+                            <h4>Set Location</h4>
 
                             <div
                               style={{

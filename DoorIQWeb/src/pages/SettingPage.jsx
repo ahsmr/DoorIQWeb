@@ -28,6 +28,7 @@ export default function SettingPage({ onNavigate }) {
   const [deviceInputs, setDeviceInputs] = useState({}); 
   const [editingHomeId, setEditingHomeId] = useState(null);
   const [editHomeName, setEditHomeName] = useState('');
+  const [locationInputs, setLocationInputs] = useState({}); //For the weatherForecasting
 
   useEffect(() => {
     fetchInitialData();
@@ -49,6 +50,45 @@ export default function SettingPage({ onNavigate }) {
       console.error("Error sending command to Supabase:", err);
     }
   };
+  // --- Location logic ---
+  const handleLocationChange = (homeId, field, value) => {
+  setLocationInputs(prev => ({
+    ...prev,
+    [homeId]: {
+      ...prev[homeId],
+      [field]: value,
+    },
+  }));
+};
+
+const handleSaveLocation = async (homeId) => {
+  const locationData = locationInputs[homeId];
+
+  if (!locationData?.country || !locationData?.city) {
+    return alert('Please provide both country and city.');
+  }
+
+  setLoading(true);
+
+  try {
+    const location = `${locationData.city}, ${locationData.country}`;
+
+    const { error } = await supabase
+      .from('homes')
+      .update({ location })
+      .eq('id', homeId);
+
+    if (error) throw error;
+
+        alert('Location updated successfully!');
+    fetchInitialData();
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // --- IR LOGIC HANDLERS ---
   const handleIrToggle = async (newValue) => {
@@ -91,7 +131,7 @@ export default function SettingPage({ onNavigate }) {
 
       const { data: homeMemberships, error: memberError } = await supabase
         .from('home_members')
-        .select('id, role, status, homes(id, name)')
+        .select('id, role, status, homes(id, name, location)')
         .eq('user_id', user.id)
         .eq('status', 'active');
 
@@ -445,6 +485,7 @@ export default function SettingPage({ onNavigate }) {
         {userHomes.map((userHome) => {
           const homeId = userHome.homes.id;
           const homeName = userHome.homes.name;
+          const homeLocation = userHome.homes.location;
           const isOwner = userHome.role === 'owner';
           const isActiveContext = activeHomeId === homeId;
           const homeMembers = membersByHome[homeId] || [];
@@ -488,6 +529,14 @@ export default function SettingPage({ onNavigate }) {
                 </div>
               </div>
 
+              {/* LOCATION DISPLAY SECTION */}
+              <div className="location-info" style={{ marginBottom: '15px', paddingLeft: '45px' }}>
+                <span className="desc">Location: </span>
+                <span className="label" style={{ color: '#00d4ff', fontSize: '0.9rem' }}>
+                  {homeLocation || "No location set"}
+                </span>
+              </div>
+
               <div className="home-details">
                 <div className="owner-controls-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px', marginTop: '10px' }}>
                   <div className="column">
@@ -529,7 +578,47 @@ export default function SettingPage({ onNavigate }) {
                   </div>
 
                   <div className="column">
+                    {isOwner && (
+                          <div style={{ marginTop: '0px', marginBottom: '20px' }}>
+                            <h4>Weather Location</h4>
+
+                            <div
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr auto',
+                                gap: '10px',
+                                marginTop: '10px',
+                              }}
+                            >
+                              <input
+                                type="text"
+                                placeholder="Country"
+                                value={locationInputs[homeId]?.country || ''}
+                                onChange={(e) =>
+                                  handleLocationChange(homeId, 'country', e.target.value)
+                                }
+                              />
+
+                              <input
+                                type="text"
+                                placeholder="City"
+                                value={locationInputs[homeId]?.city || ''}
+                                onChange={(e) =>
+                                  handleLocationChange(homeId, 'city', e.target.value)
+                                }
+                              />
+
+                              <button
+                                onClick={() => handleSaveLocation(homeId)}
+                                disabled={loading}
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        )}
                     <h4>Linked Devices</h4>
+                    
                     <div className="member-list">
                       {homeDevices.map(device => (
                         <div key={device.id} className="member-item">
@@ -566,7 +655,7 @@ export default function SettingPage({ onNavigate }) {
                     )}
                   </div>
                   {!isOwner && (
-                  <p className="desc" style={{ marginTop: '20px', textAlign: 'center', borderTop: '1px solid #1f1f1f', paddingTop: '10px' }}>
+                  <p className="desc" style={{ marginTop: '20px', textAlign: 'center', borderTop: '1px solid #1f1f1f', paddingTop: '10px', gridColumn: 'span 2' }}>
                     You are a member of this home. Contact the owner to manage settings.
                   </p>
                 )}
@@ -701,15 +790,86 @@ export default function SettingPage({ onNavigate }) {
         .action-footer { margin-top: 40px; text-align: center; }
         .btn-logout { background: transparent; color: #ff4d4d; border: 1px solid #ff4d4d44; padding: 10px 20px; border-radius: 12px; cursor: pointer; }
         .version { font-size: 0.75rem; color: #444; margin-top: 15px; }
-        .card-header div[style*="display: flex"] {flex-wrap: wrap;gap: 10px;}
-        @media (max-width: 900px) {
-        .owner-controls-grid { grid-template-columns: 1fr !important; }
-        /* Allow the header to grow and wrap items when the input is visible */
-        .card-header { flex-direction: column; align-items: flex-start; gap: 15px; }
-        .owner-actions-container { width: 100%; justify-content: flex-start; gap: 10px;}
+        .card-header div[style*="display: flex"] {flex-wrap: wrap;}
+        /* --- COMPREHENSIVE MOBILE RESPONSIVENESS --- */
+
+        /* Tablet & Smaller Desktops */
+        @media (max-width: 1024px) {
+          .settings-wrapper { padding: 20px 4%; }
+          .owner-controls-grid { gap: 15px; }
         }
-      `}
-      </style>
+
+        /* Phones & Small Tablets */
+        @media (max-width: 850px) {
+          .owner-controls-grid { 
+            grid-template-columns: 1fr !important; /* Forces the side-by-side columns to stack */
+          }
+          
+          .profile-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .card-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 15px;
+          }
+
+          .card-header > div {
+            width: 100%;
+            justify-content: space-between;
+          }
+        }
+
+        /* Small Phones */
+        @media (max-width: 500px) {
+          .settings-wrapper { padding: 15px 10px; }
+          
+          .page-title h1 { font-size: 1.5rem; }
+          
+          .settings-card { padding: 15px; }
+
+          /* Fixes inputs and buttons that are too wide for the screen */
+          .input-group {
+            flex-direction: column;
+          }
+
+          input, button {
+            width: 100%;
+            box-sizing: border-box;
+          }
+
+          .member-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+          }
+
+          .member-item button {
+            align-self: flex-end;
+            width: auto;
+          }
+
+          .setting-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+          }
+
+          .switch {
+            align-self: flex-end;
+          }
+
+          .email-display {
+            word-break: break-all; /* Prevents long emails from pushing the card out */
+            font-size: 0.75rem;
+          }
+
+          .logo div {
+            font-size: 18px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

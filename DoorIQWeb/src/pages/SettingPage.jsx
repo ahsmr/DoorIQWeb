@@ -578,45 +578,6 @@ const handleSaveLocation = async (homeId) => {
                   </div>
 
                   <div className="column">
-                    {isOwner && (
-                          <div style={{ marginTop: '0px', marginBottom: '20px' }}>
-                            <h4>Weather Location</h4>
-
-                            <div
-                              style={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr 1fr auto',
-                                gap: '10px',
-                                marginTop: '10px',
-                              }}
-                            >
-                              <input
-                                type="text"
-                                placeholder="Country"
-                                value={locationInputs[homeId]?.country || ''}
-                                onChange={(e) =>
-                                  handleLocationChange(homeId, 'country', e.target.value)
-                                }
-                              />
-
-                              <input
-                                type="text"
-                                placeholder="City"
-                                value={locationInputs[homeId]?.city || ''}
-                                onChange={(e) =>
-                                  handleLocationChange(homeId, 'city', e.target.value)
-                                }
-                              />
-
-                              <button
-                                onClick={() => handleSaveLocation(homeId)}
-                                disabled={loading}
-                              >
-                                Save
-                              </button>
-                            </div>
-                          </div>
-                        )}
                     <h4>Linked Devices</h4>
                     
                     <div className="member-list">
@@ -653,6 +614,45 @@ const handleSaveLocation = async (homeId) => {
                         </div>
                       </div>
                     )}
+                    {isOwner && (
+                          <div style={{ marginTop: '0px', marginBottom: '20px' }}>
+                            <h4>Location</h4>
+
+                            <div
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr auto',
+                                gap: '10px',
+                                marginTop: '10px',
+                              }}
+                            >
+                              <input
+                                type="text"
+                                placeholder="Country"
+                                value={locationInputs[homeId]?.country || ''}
+                                onChange={(e) =>
+                                  handleLocationChange(homeId, 'country', e.target.value)
+                                }
+                              />
+
+                              <input
+                                type="text"
+                                placeholder="City"
+                                value={locationInputs[homeId]?.city || ''}
+                                onChange={(e) =>
+                                  handleLocationChange(homeId, 'city', e.target.value)
+                                }
+                              />
+
+                              <button
+                                onClick={() => handleSaveLocation(homeId)}
+                                disabled={loading}
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        )}
                   </div>
                   {!isOwner && (
                   <p className="desc" style={{ marginTop: '20px', textAlign: 'center', borderTop: '1px solid #1f1f1f', paddingTop: '10px', gridColumn: 'span 2' }}>

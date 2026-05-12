@@ -94,9 +94,9 @@ const handleSaveLocation = async (homeId) => {
   const handleIrToggle = async (newValue) => {
     setIrEnabled(newValue);
     if (newValue === true) {
-      await sendCommand('IR_MODE_ON', null);
+      await sendCommand('led_aan', null);
     } else {
-      await sendCommand('IR_MODE_OFF', null);
+      await sendCommand('led_uit', null);
     }
   };
 
@@ -107,9 +107,9 @@ const handleSaveLocation = async (homeId) => {
     if (isNowStandard) {
       setIrEnabled(true); // Automatically turn IR on if it's the standard
       setShowManualToggle(false); // Hide the toggle if it was open
-      await sendCommand('IR_STANDARD_SET_ON', null);
+      await sendCommand('led_standaard', null);
     } else {
-      await sendCommand('IR_STANDARD_SET_OFF', null);
+      await sendCommand('led_standaard_off', null);
     }
   };
 

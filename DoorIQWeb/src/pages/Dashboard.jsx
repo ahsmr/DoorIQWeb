@@ -50,23 +50,46 @@ export default function Dashboard({ onNavigate }) {
     fetchAllVideos();
     
 
-    const eventChannel = supabase  //Fetch the data from the database(supabase)
-      .channel(`events-${homeId}`)
-      .on('postgres_changes', 
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'events',
-          filter: `home_id=eq.${homeId}` 
-        }, 
-        (payload) => { // Whenever a row is added to this table(events) in supabase update events on the frontend as well
-          setEvents((prev) => {
-            if (prev.some(e => e.id === payload.new.id)) return prev;
-            return [payload.new, ...prev].slice(0, 4);
-          });
-        }
-      )
-      .subscribe(); // Subscribe to the real time notification system built in supabase
+    const eventChannel = supabase //Fetch the events in real time from the supabase and display them on the dashaboard
+  .channel(`events-${homeId}`)
+
+  // New events
+  .on(
+    'postgres_changes',
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'events',
+      filter: `home_id=eq.${homeId}`
+    },
+    (payload) => {
+      setEvents((prev) => {
+        if (prev.some(e => e.id === payload.new.id)) return prev;
+        return [payload.new, ...prev].slice(0, 4);
+      });
+    }
+  )
+
+  // Updated events
+  .on(
+    'postgres_changes',
+    {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'events',
+      filter: `home_id=eq.${homeId}`
+    },
+    (payload) => {
+      setEvents((prev) =>
+        prev.map((event) =>
+          event.id === payload.new.id
+            ? payload.new // replace old row with updated row
+            : event
+        )
+      );
+    }
+  )
+  .subscribe();
 
     const inviteChannel = supabase // check the invites for this specific user
       .channel(`invites-${homeId}`)
@@ -270,7 +293,7 @@ export default function Dashboard({ onNavigate }) {
       const { data: files, error: listError } = await supabase.storage
         .from('camera-video')
         .list(homeId, {
-          limit: 40, // Increased limit slightly so we can grab both videos and audios comfortably
+          limit: 20, // Increased limit slightly so we can grab both videos and audios comfortably
           sortBy: { column: 'created_at', order: 'desc' }
         });
 

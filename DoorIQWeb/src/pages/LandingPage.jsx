@@ -83,17 +83,17 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
           <div className="bento-card">
             <div className="icon">📡</div>
             <h3>Edge Computing</h3>
-            <p>Built on the Raspberry Pi Zero 2W[cite: 20, 31]. Local motion sensing and IR camera processing at the source[cite: 28, 35].</p>
+            <p>Built on the Raspberry Pi Zero 2W. Local motion sensing and IR camera processing at the source.</p>
           </div>
           <div className="bento-card">
             <div className="icon">🎙️</div>
             <h3>LiveKit Bridge</h3>
-            <p>Instant two-way audio[cite: 16]. Talk to visitors through your browser and hear them via the Pi's cloud-connected mic[cite: 23, 49].</p>
+            <p>Instant two-way audio. Talk to visitors through your browser and hear them via the Pi's cloud-connected mic.</p>
           </div>
           <div className="bento-card wide">
             <div className="icon">⚡</div>
             <h3>Supabase Realtime</h3>
-            <p>Database and Auth managed via Supabase[cite: 24, 47]. Get instant notifications for motion events and doorbell presses across all your linked devices[cite: 28, 39].</p>
+            <p>Database and Auth managed via Supabase. Get instant notifications for motion events and doorbell presses across all your linked devices.</p>
           </div>
         </div>
       </section>
@@ -104,8 +104,8 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
             <div className="tag">Live Interaction</div>
             <h3>Communicate in Real-Time</h3>
             <p>
-              Use the LiveKit-powered hub to speak directly to your Raspberry Pi speaker[cite: 23, 40]. 
-              Whether it’s a delivery person or a friend, the real-time room ensures your voice is heard instantly[cite: 4, 16].
+              Use the LiveKit-powered hub to speak directly to your Raspberry Pi speaker. 
+              Whether it’s a delivery person or a friend, the real-time room ensures your voice is heard instantly.
             </p>
           </div>
           <div className="feature-ui-box">
@@ -121,7 +121,7 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
             <div className="tag">Automation</div>
             <h3>Prerecorded Intelligence</h3>
             <p>
-              Not available? Record custom voice notes to play automatically when the doorbell button is pressed[cite: 39]. 
+              Not available? Record custom voice notes to play automatically when the doorbell button is pressed. 
               Manage your library of "Play now" and "Standard" responses from your dashboard.
             </p>
           </div>
@@ -139,8 +139,8 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
           <h2>Manage Your Entire Home</h2>
           <p>Create separate "Homes," invite members via UUID, and link hardware effortlessly. All your devices, one unified interface.</p>
           <div className="stats-row">
-            <div className="stat-item"><span>IR</span>Night Vision [cite: 34, 38]</div>
-            <div className="stat-item"><span>LIVE</span>Motion Alerts [cite: 28]</div>
+            <div className="stat-item"><span>IR</span>Night Vision </div>
+            <div className="stat-item"><span>LIVE</span>Motion Alerts </div>
             <div className="stat-item"><span>∞</span>Shared Access</div>
           </div>
           <button onClick={onGetStarted} className="btn-get-started btn-large">Register Your First Device</button>

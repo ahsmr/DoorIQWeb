@@ -54,7 +54,7 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
         <div className="hero-actions">
           <button onClick={onGetStarted} className="btn-get-started">Open Dashboard</button>
           <button className="btn-video" onClick={() => setIsPosterOpen(true)}>
-            <span>▶</span> System Overview
+            <span>▶</span> Project Poster
           </button>
         </div>
       </header>

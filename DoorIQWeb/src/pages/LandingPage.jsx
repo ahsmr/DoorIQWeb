@@ -1,25 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
+  const [isPosterOpen, setIsPosterOpen] = useState(false);
+
   return (
     <div className="landing-wrapper">
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
       </style>
 
-      {/* Academic Disclaimer Top Bar */}
       <div className="academic-top-bar">
         Project for P&O II • Department of Computer Science • KU Leuven
       </div>
 
-      {/* Navigation */}
       <nav className="glass-nav">
-      <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <img src="/logo.png" alt="DoorIQ Icon" style={{ height: '32px', width: 'auto' }} />
-        <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
-          Door<span style={{ color: '#00d2ff' }}>IQ</span>
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img src="/logo.png" alt="DoorIQ Icon" style={{ height: '32px', width: 'auto' }} />
+          <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
+            Door<span style={{ color: '#00d2ff' }}>IQ</span>
+          </div>
         </div>
-      </div>
         <div className="nav-links">
           <a href="#tech" className="desktop-link">Technology</a>
           <a href="#features" className="desktop-link">Features</a>
@@ -39,13 +39,11 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
           </button>
         </div>
         <div className="auth-buttons">
-          {/* This button now specifically calls onLogin */}
           <button onClick={onLogin} className="btn-login-link">Login</button>
           <button onClick={onGetStarted} className="btn-get-started">Get Started</button>
         </div>
       </nav>
 
-      {/* Hero Section */}
       <header className="hero">
         <div className="badge">IoT Security Prototype</div>
         <h1>Your Front Door, <span>Reimagined</span> with Intelligence.</h1>
@@ -55,11 +53,26 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
         </p>
         <div className="hero-actions">
           <button onClick={onGetStarted} className="btn-get-started">Open Dashboard</button>
-          <button className="btn-video"><span>▶</span> System Overview</button>
+          <button className="btn-video" onClick={() => setIsPosterOpen(true)}>
+            <span>▶</span> System Overview
+          </button>
         </div>
       </header>
 
-      {/* Technology Bento Grid */}
+      {/* POSTER MODAL OVERLAY */}
+      {isPosterOpen && (
+        <div className="poster-overlay" onClick={() => setIsPosterOpen(false)}>
+          <div className="poster-content" onClick={(e) => e.stopPropagation()}>
+            <button className="close-poster" onClick={() => setIsPosterOpen(false)}>&times;</button>
+            <img 
+              src="/poster.png" 
+              alt="System Poster" 
+              className="poster-img" 
+            />
+          </div>
+        </div>
+      )}
+
       <section id="tech" className="section-container">
         <div className="section-header">
           <h2>Cutting Edge Architecture</h2>
@@ -70,30 +83,29 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
           <div className="bento-card">
             <div className="icon">📡</div>
             <h3>Edge Computing</h3>
-            <p>Built on the Raspberry Pi Zero 2W. Local motion sensing and IR camera processing at the source.</p>
+            <p>Built on the Raspberry Pi Zero 2W[cite: 20, 31]. Local motion sensing and IR camera processing at the source[cite: 28, 35].</p>
           </div>
           <div className="bento-card">
             <div className="icon">🎙️</div>
             <h3>LiveKit Bridge</h3>
-            <p>Instant two-way audio. Talk to visitors through your browser and hear them via the Pi's cloud-connected mic.</p>
+            <p>Instant two-way audio[cite: 16]. Talk to visitors through your browser and hear them via the Pi's cloud-connected mic[cite: 23, 49].</p>
           </div>
           <div className="bento-card wide">
             <div className="icon">⚡</div>
             <h3>Supabase Realtime</h3>
-            <p>Database and Auth managed via Supabase. Get instant notifications for motion events and doorbell presses across all your linked devices.</p>
+            <p>Database and Auth managed via Supabase[cite: 24, 47]. Get instant notifications for motion events and doorbell presses across all your linked devices[cite: 28, 39].</p>
           </div>
         </div>
       </section>
 
-      {/* Features Detail */}
       <section id="features" className="features-showcase">
         <div className="feature-row">
           <div className="feature-text">
             <div className="tag">Live Interaction</div>
             <h3>Communicate in Real-Time</h3>
             <p>
-              Use the LiveKit-powered hub to speak directly to your Raspberry Pi speaker. 
-              Whether it’s a delivery person or a friend, the real-time room ensures your voice is heard instantly.
+              Use the LiveKit-powered hub to speak directly to your Raspberry Pi speaker[cite: 23, 40]. 
+              Whether it’s a delivery person or a friend, the real-time room ensures your voice is heard instantly[cite: 4, 16].
             </p>
           </div>
           <div className="feature-ui-box">
@@ -109,7 +121,7 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
             <div className="tag">Automation</div>
             <h3>Prerecorded Intelligence</h3>
             <p>
-              Not available? Record custom voice notes to play automatically when the doorbell button is pressed. 
+              Not available? Record custom voice notes to play automatically when the doorbell button is pressed[cite: 39]. 
               Manage your library of "Play now" and "Standard" responses from your dashboard.
             </p>
           </div>
@@ -122,14 +134,13 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
         </div>
       </section>
 
-      {/* Ecosystem Section */}
       <section id="ecosystem" className="ecosystem-cta">
         <div className="cta-inner">
           <h2>Manage Your Entire Home</h2>
           <p>Create separate "Homes," invite members via UUID, and link hardware effortlessly. All your devices, one unified interface.</p>
           <div className="stats-row">
-            <div className="stat-item"><span>IR</span>Night Vision</div>
-            <div className="stat-item"><span>LIVE</span>Motion Alerts</div>
+            <div className="stat-item"><span>IR</span>Night Vision [cite: 34, 38]</div>
+            <div className="stat-item"><span>LIVE</span>Motion Alerts [cite: 28]</div>
             <div className="stat-item"><span>∞</span>Shared Access</div>
           </div>
           <button onClick={onGetStarted} className="btn-get-started btn-large">Register Your First Device</button>
@@ -167,6 +178,51 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
           margin: 0; padding: 0;
         }
 
+        /* UPDATED MODAL CSS FOR BETTER VISIBILITY */
+        .poster-overlay {
+          position: fixed;
+          top: 0; left: 0; 
+          width: 100vw; 
+          height: 100vh;
+          background: rgba(0, 0, 0, 0.9);
+          backdrop-filter: blur(10px);
+          display: flex; 
+          justify-content: center; 
+          align-items: center;
+          z-index: 9999;
+          padding: 40px; /* Space around the poster */
+        }
+
+        .poster-content { 
+          position: relative; 
+          max-width: 90%; 
+          max-height: 90%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .poster-img { 
+          max-width: 100%; 
+          max-height: 85vh; /* Prevents overflow */
+          object-fit: contain; /* Keeps aspect ratio */
+          border-radius: 8px; 
+          border: 1px solid var(--border);
+          box-shadow: 0 0 40px rgba(0, 212, 255, 0.2);
+        }
+
+        .close-poster {
+          position: absolute; 
+          top: -40px; 
+          right: -10px;
+          background: none; 
+          border: none; 
+          color: white;
+          font-size: 2.5rem; 
+          cursor: pointer;
+          line-height: 1;
+        }
+
         .academic-top-bar {
           background: #00d4ff;
           color: #000;
@@ -178,7 +234,6 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
           text-transform: uppercase;
         }
 
-        /* NAVIGATION */
         .glass-nav {
           display: flex; justify-content: space-between; align-items: center;
           padding: 1.2rem 8%; background: rgba(5, 5, 5, 0.85);
@@ -190,7 +245,6 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
         .nav-links a { color: var(--text-dim); text-decoration: none; margin: 0 18px; font-size: 0.9rem; font-weight: 500; transition: 0.3s; }
         .nav-links a:hover { color: white; }
 
-        /* BUTTONS */
         .btn-get-started {
           background: var(--accent); color: black; padding: 10px 24px;
           border-radius: 8px; border: none; cursor: pointer; font-weight: 700;
@@ -199,7 +253,6 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
         .btn-get-started:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 212, 255, 0.4); }
         .btn-login-link { background: none; border: none; color: white; margin-right: 15px; cursor: pointer; font-weight: 600; }
 
-        /* HERO */
         .hero { text-align: center; padding: 100px 10% 100px; max-width: 1000px; margin: 0 auto; }
         .badge {
           display: inline-block; background: rgba(0, 212, 255, 0.1); color: var(--accent);
@@ -212,7 +265,6 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
         .hero-actions { display: flex; gap: 15px; justify-content: center; }
         .btn-video { background: #111; color: white; padding: 10px 24px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; }
 
-        /* BENTO */
         .section-container { padding: 80px 8%; max-width: 1200px; margin: 0 auto; }
         .section-header { text-align: center; margin-bottom: 50px; }
         .section-header h2 { font-size: 2.5rem; margin-bottom: 10px; }
@@ -222,7 +274,6 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
         .bento-card .icon { font-size: 2.2rem; margin-bottom: 20px; display: block; }
         .wide { grid-column: span 2; }
 
-        /* FEATURES SHOWCASE */
         .features-showcase { padding: 100px 8%; max-width: 1100px; margin: 0 auto; }
         .feature-row { display: flex; align-items: center; gap: 80px; margin-bottom: 120px; }
         .feature-row.reverse { flex-direction: row-reverse; }
@@ -238,7 +289,6 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
         .v-item { background: #151515; padding: 15px; border-radius: 12px; font-size: 0.85rem; border: 1px solid #222; }
         .v-item.active { border-color: var(--accent); background: rgba(0, 212, 255, 0.05); }
 
-        /* ECOSYSTEM */
         .ecosystem-cta { padding: 0 8% 100px; }
         .cta-inner { 
           background: linear-gradient(145deg, #0a0a0a 0%, #030303 100%); 
@@ -253,43 +303,23 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
         .disclaimer { max-width: 800px; margin: 20px auto 0; }
         .not-affiliated { color: #444; font-size: 0.75rem; }
 
-/* MOBILE FIXES */
         @media (max-width: 800px) {
-          .glass-nav { 
-            padding: 1rem 5%; 
-            gap: 10px;
-          }
-          
-          /* Change: Keep the container, hide only the anchor links */
+          .glass-nav { padding: 1rem 5%; gap: 10px; }
           .nav-links .desktop-link { display: none; }
           .nav-links { display: flex; }
           .about-nav-btn { margin: 0 5px !important; font-size: 0.8rem !important; }
-
           .auth-buttons { gap: 8px; }
           .btn-login-link { font-size: 0.85rem; padding: 8px; margin: 0; }
           .btn-get-started { padding: 8px 16px; font-size: 0.85rem; }
-
-          /* Bento Grid Fixes */
-          .bento-container { 
-            grid-template-columns: 1fr !important; 
-            gap: 16px; 
-          }
-          
-          .bento-card {
-            grid-column: span 1 !important; 
-            padding: 25px; 
-            height: auto; 
-          }
-
-          .wide { 
-            grid-column: span 1 !important; 
-          }
-
-          /* General Layout cleanup */
+          .bento-container { grid-template-columns: 1fr !important; gap: 16px; }
+          .bento-card { grid-column: span 1 !important; padding: 25px; height: auto; }
+          .wide { grid-column: span 1 !important; }
           .hero h1 { font-size: 2.2rem; }
           .section-container { padding: 40px 5%; }
           .section-header h2 { font-size: 2rem; }
           .feature-row, .feature-row.reverse { flex-direction: column; text-align: center; gap: 30px; }
+          .poster-overlay { padding: 10px; }
+          .close-poster { top: -45px; right: 10px; }
         }
       `}</style>
     </div>

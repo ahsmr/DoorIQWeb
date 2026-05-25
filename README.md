@@ -119,7 +119,7 @@ This project was created for:
 ---
 ### 🌐 Live Deployment Status
 
-Our frontend is successfully deployed on Vercel: [[Link to Website](https://door-iq-web.vercel.app/)]
+Our frontend is successfully deployed on Vercel: [[DoorIQWebsite](https://door-iq-web.vercel.app/)]
 
 * **What is working:** The **Landing Page** and the **About Us** page are fully functional. Feel free to browse the UI, view our system architecture graphics, and meet the development team.
 * **What is temporarily locked:** The **Login**, **Dashboard**, and **Hardware Settings** pages. Because this is a student prototype, our real-time IoT event streams and WebRTC signaling have completely maxed out our monthly **Supabase Free-Tier Egress Quota**.

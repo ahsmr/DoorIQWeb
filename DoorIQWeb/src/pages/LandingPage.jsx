@@ -22,6 +22,7 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
         </div>
         <div className="nav-links">
           <a href="#tech" className="desktop-link">Technology</a>
+          <a href="#demo" className="desktop-link">System Demo</a>
           <a href="#features" className="desktop-link">Features</a>
           <a href="#ecosystem" className="desktop-link">Ecosystem</a>
           <button 
@@ -53,6 +54,9 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
         </p>
         <div className="hero-actions">
           <button onClick={onGetStarted} className="btn-get-started">Open Dashboard</button>
+          <a href="#demo" className="btn-video anchor-video-btn">
+            <span>▶</span> Watch Demo
+          </a>
           <button className="btn-video" onClick={() => setIsPosterOpen(true)}>
             <span>▶</span> Project Poster
           </button>
@@ -94,6 +98,25 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
             <div className="icon">⚡</div>
             <h3>Supabase Realtime</h3>
             <p>Database and Auth managed via Supabase. Get instant notifications for motion events and doorbell presses across all your linked devices.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* NEW VIDEO DEMO SECTION */}
+      <section id="demo" className="section-container video-showcase-section">
+        <div className="section-header">
+          <h2>System Demonstration</h2>
+          <p>See our smart home ecosystem handle live feeds, alerts, and streaming interactions instantly.</p>
+        </div>
+        <div className="video-wrapper">
+          <div className="video-responsive">
+            <iframe
+              src="https://www.youtube.com/embed/SpW2wyMR7_M"
+              title="DoorIQ System Walkthrough"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            ></iframe>
           </div>
         </div>
       </section>
@@ -166,6 +189,10 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
           --card-bg: #0f0f0f;
           --text-dim: #94a3b8;
           --border: rgba(255, 255, 255, 0.1);
+        }
+
+        html {
+          scroll-behavior: smooth;
         }
 
         .landing-wrapper {
@@ -262,12 +289,37 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
         .hero h1 { font-size: clamp(2.8rem, 7vw, 4.2rem); font-weight: 800; line-height: 1.1; margin: 0 0 25px; }
         .hero h1 span { color: var(--accent); }
         .hero p { color: var(--text-dim); font-size: 1.2rem; line-height: 1.6; max-width: 750px; margin: 0 auto 40px; }
-        .hero-actions { display: flex; gap: 15px; justify-content: center; }
-        .btn-video { background: #111; color: white; padding: 10px 24px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-weight: 600; }
+        .hero-actions { display: flex; gap: 15px; justify-content: center; align-items: center; }
+        
+        .btn-video { 
+          background: #111; color: white; padding: 10px 24px; border-radius: 8px; 
+          border: 1px solid var(--border); cursor: pointer; font-weight: 600; transition: 0.3s;
+        }
+        .btn-video:hover { background: #1a1a1a; border-color: var(--accent); }
+        .anchor-video-btn { text-decoration: none; display: inline-flex; align-items: center; font-size: 0.95rem; }
 
         .section-container { padding: 80px 8%; max-width: 1200px; margin: 0 auto; }
         .section-header { text-align: center; margin-bottom: 50px; }
         .section-header h2 { font-size: 2.5rem; margin-bottom: 10px; }
+
+        /* VIDEO DISPLAY STYLING */
+        .video-showcase-section { padding-top: 40px; padding-bottom: 60px; }
+        .video-wrapper { max-width: 900px; margin: 0 auto; width: 100%; }
+        .video-responsive {
+          overflow: hidden;
+          padding-bottom: 56.25%;
+          position: relative;
+          height: 0;
+          border-radius: 24px;
+          border: 1px solid #1f1f1f;
+          box-shadow: 0 20px 50px rgba(0, 212, 255, 0.08);
+          transition: 0.3s;
+        }
+        .video-responsive:hover { border-color: var(--accent); }
+        .video-responsive iframe {
+          left: 0; top: 0; height: 100%; width: 100%; position: absolute;
+        }
+
         .bento-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
         .bento-card { background: var(--card-bg); border: 1px solid #1f1f1f; padding: 35px; border-radius: 24px; transition: 0.3s; }
         .bento-card:hover { border-color: var(--accent); transform: translateY(-5px); }
@@ -315,6 +367,8 @@ const LandingPage = ({ onGetStarted, onLogin, onNavigateToAbout }) => {
           .bento-card { grid-column: span 1 !important; padding: 25px; height: auto; }
           .wide { grid-column: span 1 !important; }
           .hero h1 { font-size: 2.2rem; }
+          .hero-actions { flex-direction: column; width: 100%; gap: 10px; }
+          .btn-video, .btn-get-started { width: 100%; text-align: center; }
           .section-container { padding: 40px 5%; }
           .section-header h2 { font-size: 2rem; }
           .feature-row, .feature-row.reverse { flex-direction: column; text-align: center; gap: 30px; }

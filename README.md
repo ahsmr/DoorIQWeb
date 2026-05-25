@@ -94,6 +94,17 @@ cd DoorIQWeb
 npm run dev
 ```
 
+---
+
+### Third-Party Services
+
+This project uses:
+- [Supabase](https://supabase.com)
+- [LiveKit](https://cloud.livekit.io)
+
+Their respective licenses and terms apply to those services.
+
+---
 
 ### 🎓 Academic Credit
 This project was created for:

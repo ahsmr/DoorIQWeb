@@ -124,4 +124,5 @@ Our frontend is successfully deployed on Vercel: [[Link to Website](https://door
 * **What is working:** The **Landing Page** and the **About Us** page are fully functional. Feel free to browse the UI, view our system architecture graphics, and meet the development team.
 * **What is temporarily locked:** The **Login**, **Dashboard**, and **Hardware Settings** pages. Because this is a student prototype, our real-time IoT event streams and WebRTC signaling have completely maxed out our monthly **Supabase Free-Tier Egress Quota**.
 
-To evaluate the full user flow, database pipelines, and settings configurations of the live prototype, please refer directly to our [System Walkthrough Video]([YOUR_YOUTUBE](https://www.youtube.com/watch?v=SpW2wyMR7_M)) where the entire ecosystem is presented end-to-end.
+To evaluate the full user flow, database pipelines, and settings configurations of the live prototype, please refer directly to our 
+([System Walkthrough Video](https://www.youtube.com/watch?v=SpW2wyMR7_M)) where the entire ecosystem is presented end-to-end.

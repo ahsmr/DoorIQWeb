@@ -121,7 +121,7 @@ This project was created for:
 ![Status](https://img.shields.io/badge/Status-Operational-brightgreen)
 
 Our platform is fully deployed and operational on Vercel: [[DoorIQ Website](https://door-iq-web.vercel.app/)]
-
+* **Note**: You may experience service interruptions or limited functionality Duo to restrictions of free version of Supabase.
 * **Public Access:** The Landing Page and About Us sections are fully functional. 
 * **Full System Access:** You can sign up, log in, and explore the dashboard interface, home management, and device linking features.
 * **Important Note on Data:** Because this is a cloud-only deployment, the **real-time IoT data streams (video/audio, motion events, and doorbell triggers)** are currently inactive. These features require a physical Raspberry Pi Zero 2W to authenticate and push data to Supabase/LiveKit.

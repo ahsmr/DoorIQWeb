@@ -117,12 +117,18 @@ This project was created for:
 
 *  **Year: 2025-2026**
 ---
-### 🌐 Live Deployment Status
+## 🌐 Live Deployment Status
+![Status](https://img.shields.io/badge/Status-Operational-brightgreen)
 
-Our frontend is successfully deployed on Vercel: [[DoorIQWebsite](https://door-iq-web.vercel.app/)]
+Our platform is fully deployed and operational on Vercel: [[DoorIQ Website](https://door-iq-web.vercel.app/)]
 
-* **What is working:** The **Landing Page** and the **About Us** page are fully functional. Feel free to browse the UI, view our system architecture graphics, and meet the development team.
-* **What is temporarily locked:** The **Login**, **Dashboard**, and **Hardware Settings** pages. Because this is a student prototype, our real-time IoT event streams and WebRTC signaling have completely maxed out our monthly **Supabase Free-Tier Egress Quota**.
+* **Public Access:** The Landing Page and About Us sections are fully functional. 
+* **Full System Access:** You can sign up, log in, and explore the dashboard interface, home management, and device linking features.
+* **Important Note on Data:** Because this is a cloud-only deployment, the **real-time IoT data streams (video/audio, motion events, and doorbell triggers)** are currently inactive. These features require a physical Raspberry Pi Zero 2W to authenticate and push data to Supabase/LiveKit.
+* **System Demo:** To see how the hardware integrates with the cloud, please watch our [System Walkthrough Video](https://www.youtube.com/watch?v=SpW2wyMR7_M) to see the full end-to-end functionality.
 
-To evaluate the full user flow, database pipelines, and settings configurations of the live prototype, please refer directly to our 
-([System Walkthrough Video](https://www.youtube.com/watch?v=SpW2wyMR7_M)) where the entire ecosystem is presented end-to-end.
+### 🚀 How to Experience DoorIQ
+1. **Visit:** Head over to the [Live Dashboard](https://door-iq-web.vercel.app/).
+2. **Onboard:** Create a new account to explore the UI.
+3. **Configure:** Create a "Home" to test the management workflows.
+4. **Learn:** Watch the [System Walkthrough Video](https://www.youtube.com/watch?v=SpW2wyMR7_M) to understand how the hardware-software handshake works in a complete production environment.

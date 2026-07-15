@@ -118,7 +118,7 @@ This project was created for:
 *  **Year: 2025-2026**
 ---
 ## 🌐 Live Deployment Status
-![Status](https://img.shields.io/badge/Status-Operational-brightgreen)
+![Status](https://img.shields.io/badge/Status-Not-Operational-brightred)
 
 Our platform is fully deployed and operational on Vercel: [[DoorIQ Website](https://door-iq-web.vercel.app/)]
 * **Note**: You may experience service interruptions or limited functionality Duo to restrictions of free version of Supabase.
